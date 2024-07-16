@@ -1,0 +1,5 @@
+# Output of compile commands 
+.cache/
+
+# Build files
+build/
