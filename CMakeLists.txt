@@ -14,10 +14,25 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-add_subdirectory (src)
+# Set CMP0079 policy to NEW
+if (POLICY CMP0079)
+  cmake_policy(SET CMP0079 NEW)
+endif()
 
-target_include_directories (
+find_package(OpenGL REQUIRED)
+
+add_subdirectory(src)
+add_subdirectory(lib)
+
+target_include_directories(
     ${PROJECT_NAME}
-    PUBLIC include
+    PRIVATE include
+)
+
+target_link_libraries(
+    ${PROJECT_NAME}
+    glfw
+    glad
+    OpenGL::GL
 )
 

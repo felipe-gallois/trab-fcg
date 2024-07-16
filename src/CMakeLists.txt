@@ -1,4 +1,4 @@
-add_executable (
+add_executable(
     ${PROJECT_NAME}
     main.cpp
 )
