@@ -278,28 +278,29 @@ int main(int argc, char* argv[])
     //
     LoadShadersFromFiles();
 
-    // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("assets/textures/tc-earth_daymap_surface.jpg");      // TextureImage0
-    LoadTextureImage("assets/textures/tc-earth_nightmap_citylights.gif"); // TextureImage1
+    // ... para o cavaleiro
+    LoadTextureImage("assets/L553JN21ZU93ULU6J4LNBJYP5_obj/02fade37.jpg"); // espada
+    LoadTextureImage("assets/L553JN21ZU93ULU6J4LNBJYP5_obj/5049cba8.jpg"); // armadura
+    LoadTextureImage("assets/L553JN21ZU93ULU6J4LNBJYP5_obj/6977716c.jpg"); // escudo
+
+    // ... para árvore
+    LoadTextureImage("assets/N6TIYZO5D41STEOW4SQBKWRRG_obj/farm_trees_rocks_flowers_D.jpg");
+
+    // Carrega texturas para o chão
+    LoadTextureImage("assets/3d0113f9558947579a5d7926f087cc6a_obj/RGB_3bc2fe2dd4be4268b9e34fed3c0d7db1_ground_grass.jpeg");
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
-    ObjModel spheremodel("assets/models/sphere.obj");
-    ComputeNormals(&spheremodel);
-    BuildTrianglesAndAddToVirtualScene(&spheremodel);
+    ObjModel knightmodel("assets/L553JN21ZU93ULU6J4LNBJYP5_obj/L553JN21ZU93ULU6J4LNBJYP5.obj");
+    ComputeNormals(&knightmodel);
+    BuildTrianglesAndAddToVirtualScene(&knightmodel);
 
-    ObjModel bunnymodel("assets/models/bunny.obj");
-    ComputeNormals(&bunnymodel);
-    BuildTrianglesAndAddToVirtualScene(&bunnymodel);
+    ObjModel treemodel("assets/N6TIYZO5D41STEOW4SQBKWRRG_obj/N6TIYZO5D41STEOW4SQBKWRRG.obj");
+    ComputeNormals(&treemodel);
+    BuildTrianglesAndAddToVirtualScene(&treemodel);
 
-    ObjModel planemodel("assets/models/plane.obj");
+    ObjModel planemodel("assets/3d0113f9558947579a5d7926f087cc6a_obj/model.obj");
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
-
-    if ( argc > 1 )
-    {
-        ObjModel model(argv[1]);
-        BuildTrianglesAndAddToVirtualScene(&model);
-    }
 
     // Habilitamos o Z-buffer. Veja slides 104-116 do documento Aula_09_Projecoes.pdf.
     glEnable(GL_DEPTH_TEST);
@@ -319,8 +320,8 @@ int main(int argc, char* argv[])
         // Vermelho, Verde, Azul, Alpha (valor de transparência).
         // Conversaremos sobre sistemas de cores nas aulas de Modelos de Iluminação.
         //
-        //           R     G     B     A
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        //             R      G      B     A
+        glClearColor(0.69f, 0.84f, 0.96f, 1.0f);
 
         // "Pintamos" todos os pixels do framebuffer com a cor definida acima,
         // e também resetamos todos os pixels do Z-buffer (depth buffer).
@@ -387,31 +388,39 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        #define SPHERE 0
-        #define BUNNY  1
-        #define PLANE  2
+        #define SWORD 0
+        #define ARMOUR 1
+        #define SHIELD 2
+        #define TREE 3
+        #define PLANE 4
 
-        // Desenhamos o modelo da esfera
+        // Desenhamos o modelo do cavaleiro
         model = Matrix_Translate(-1.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SPHERE);
-        DrawVirtualObject("the_sphere");
+        glUniform1i(g_object_id_uniform, SWORD);
+        DrawVirtualObject("Object_02fade37.jpg");
+        glUniform1i(g_object_id_uniform, ARMOUR);
+        DrawVirtualObject("Object_5049cba8.jpg");
+        glUniform1i(g_object_id_uniform, SHIELD);
+        DrawVirtualObject("Object_6977716c.jpg");
 
-        // Desenhamos o modelo do coelho
+        // Desenhamos o modelo da árvore
         model = Matrix_Translate(1.0f,0.0f,0.0f)
               * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, BUNNY);
-        DrawVirtualObject("the_bunny");
+        glUniform1i(g_object_id_uniform, TREE);
+        glDisable(GL_CULL_FACE);
+        DrawVirtualObject("Object_farm_trees_rocks_flowers_D.jpg");
+        glEnable(GL_CULL_FACE);
 
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
-        DrawVirtualObject("the_plane");
+        DrawVirtualObject("object_0");
 
         // O framebuffer onde OpenGL executa as operações de renderização não
         // é o mesmo que está sendo mostrado para o usuário, caso contrário
@@ -526,7 +535,7 @@ void DrawVirtualObject(const char* object_name)
 void LoadShadersFromFiles()
 {
     GLuint vertex_shader_id = LoadShader_Vertex("assets/shaders/shader_vertex.glsl");
-    GLuint fragment_shader_id = LoadShader_Fragment("assets/shaders/shader_fragment-tarefa2.glsl");
+    GLuint fragment_shader_id = LoadShader_Fragment("assets/shaders/shader_fragment.glsl");
 
     // Deletamos o programa de GPU anterior, caso ele exista.
     if ( g_GpuProgramID != 0 )
@@ -550,6 +559,8 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage4"), 4);
     glUseProgram(0);
 }
 
@@ -1348,6 +1359,4 @@ void PrintObjModelInfo(ObjModel* model)
   }
 }
 
-// set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
-// vim: set spell spelllang=pt_br :
 
