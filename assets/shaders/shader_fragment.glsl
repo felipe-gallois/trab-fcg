@@ -68,29 +68,63 @@ void main()
     // Vetor que define o sentido da câmera em relação ao ponto atual.
     vec4 v = normalize(camera_position - p);
 
+    // Vetor que define o sentido da reflexão especular ideal.
+    vec4 r = -l + 2 * n * dot(n, l);
+
     // Coordenadas de textura U e V
     float U = texcoords.x;
     float V = texcoords.y;
 
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     vec3 Kd;
+    vec3 Ka;
+    vec3 Ks;
+    float q;
 
     if (object_id == SWORD) {
         Kd = texture(TextureImage0, vec2(U,V)).rgb;
+        Ka = Kd * 0.2f;
+        Ks = vec3(0.2f, 0.2f, 0.2f);
+        q = 80.0f;
     } else if (object_id == ARMOUR) {
         Kd = texture(TextureImage1, vec2(U,V)).rgb;
+        Ka = Kd * 0.2f;
+        Ks = vec3(0.2f, 0.2f, 0.2f);
+        q = 80.0f;
     } else if (object_id == SHIELD) {
         Kd = texture(TextureImage2, vec2(U,V)).rgb;
+        Ka = Kd * 0.2f;
+        Ks = vec3(0.2f, 0.2f, 0.2f);
+        q = 80.0f;
     } else if (object_id == TREE) {
         Kd = texture(TextureImage3, vec2(U,V)).rgb;
+        Ka = Kd * 0.2f;
+        Ks = vec3(0.0f, 0.0f, 0.0f);
+        q = 1.0f;
     } else if (object_id == PLANE) {
         Kd = texture(TextureImage4, vec2(U,V)).rgb;
+        Ka = vec3(0.0f, 0.0f, 0.0f);
+        Ks = vec3(0.0f, 0.0f, 0.0f);
+        q = 1.0f;
+    } else {
+        Kd = vec3(0.0f, 0.0f, 0.0f);
+        Ka = vec3(0.0f, 0.0f, 0.0f);
+        Ks = vec3(0.0f, 0.0f, 0.0f);
+        q = 1.0f;
     }
 
-    // Equação de Iluminação
-    float lambert = max(0,dot(n,l));
+    // Espectro da fonte de iluminação
+    vec3 I = vec3(1.0,1.0,1.0);
 
-    color.rgb = Kd * (lambert + 0.01);
+    // Espectro da luz ambiente
+    vec3 Ia = vec3(0.2,0.2,0.2);
+
+    // Equação de Iluminação
+    vec3 lambert_diffuse_term = Kd * I * max(0, dot(n, l));
+    vec3 ambient_term = Ka * Ia;
+    vec3 phong_specular_term  = Ks * I * pow(max(0, dot(r, v)), q);
+
+    color.rgb = lambert_diffuse_term + ambient_term + phong_specular_term;
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:
