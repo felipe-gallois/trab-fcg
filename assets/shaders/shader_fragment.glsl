@@ -68,8 +68,8 @@ void main()
     // Vetor que define o sentido da câmera em relação ao ponto atual.
     vec4 v = normalize(camera_position - p);
 
-    // Vetor que define o sentido da reflexão especular ideal.
-    vec4 r = -l + 2 * n * dot(n, l);
+    // Vetor que define o meio do caminho entre v e l.
+    vec4 h = normalize(v + l);
 
     // Coordenadas de textura U e V
     float U = texcoords.x;
@@ -84,21 +84,21 @@ void main()
     if (object_id == SWORD) {
         Kd = texture(TextureImage0, vec2(U,V)).rgb;
         Ka = Kd * 0.2f;
-        Ks = vec3(0.2f, 0.2f, 0.2f);
-        q = 80.0f;
+        Ks = vec3(0.1f, 0.1f, 0.1f);
+        q = 40.0f;
     } else if (object_id == ARMOUR) {
         Kd = texture(TextureImage1, vec2(U,V)).rgb;
         Ka = Kd * 0.2f;
-        Ks = vec3(0.2f, 0.2f, 0.2f);
-        q = 80.0f;
+        Ks = vec3(0.1f, 0.1f, 0.1f);
+        q = 40.0f;
     } else if (object_id == SHIELD) {
         Kd = texture(TextureImage2, vec2(U,V)).rgb;
         Ka = Kd * 0.2f;
-        Ks = vec3(0.2f, 0.2f, 0.2f);
-        q = 80.0f;
+        Ks = vec3(0.1f, 0.1f, 0.1f);
+        q = 40.0f;
     } else if (object_id == TREE) {
         Kd = texture(TextureImage3, vec2(U,V)).rgb;
-        Ka = Kd * 0.2f;
+        Ka = Kd * 0.1f;
         Ks = vec3(0.0f, 0.0f, 0.0f);
         q = 1.0f;
     } else if (object_id == PLANE) {
@@ -114,15 +114,15 @@ void main()
     }
 
     // Espectro da fonte de iluminação
-    vec3 I = vec3(1.0,1.0,1.0);
+    vec3 I = vec3(0.99f, 1.00f, 0.91f);
 
     // Espectro da luz ambiente
-    vec3 Ia = vec3(0.2,0.2,0.2);
+    vec3 Ia = vec3(0.24f, 0.79f, 0.53f);
 
     // Equação de Iluminação
     vec3 lambert_diffuse_term = Kd * I * max(0, dot(n, l));
     vec3 ambient_term = Ka * Ia;
-    vec3 phong_specular_term  = Ks * I * pow(max(0, dot(r, v)), q);
+    vec3 phong_specular_term  = Ks * I * pow(max(0, dot(n, h)), q);
 
     color.rgb = lambert_diffuse_term + ambient_term + phong_specular_term;
 
