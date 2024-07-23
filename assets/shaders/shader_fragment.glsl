@@ -13,6 +13,9 @@ in vec4 position_model;
 // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
 in vec2 texcoords;
 
+// Cor interpolada pelos vértices. Para ser utilizada no modelo de Gouraud.
+in vec3 vertex_color;
+
 // Matrizes computadas no código C++ e enviadas para a GPU
 uniform mat4 model;
 uniform mat4 view;
@@ -96,11 +99,6 @@ void main()
         Ka = Kd * 0.2f;
         Ks = vec3(0.1f, 0.1f, 0.1f);
         q = 40.0f;
-    } else if (object_id == TREE) {
-        Kd = texture(TextureImage3, vec2(U,V)).rgb;
-        Ka = Kd * 0.1f;
-        Ks = vec3(0.0f, 0.0f, 0.0f);
-        q = 1.0f;
     } else if (object_id == PLANE) {
         Kd = texture(TextureImage4, vec2(U,V)).rgb;
         Ka = vec3(0.0f, 0.0f, 0.0f);
@@ -113,18 +111,22 @@ void main()
         q = 1.0f;
     }
 
-    // Espectro da fonte de iluminação
-    vec3 I = vec3(0.99f, 1.00f, 0.91f);
+    if (object_id == TREE) {
+        color.rgb = vertex_color;
+    } else {
+        // Espectro da fonte de iluminação
+        vec3 I = vec3(0.99f, 1.00f, 0.91f);
 
-    // Espectro da luz ambiente
-    vec3 Ia = vec3(0.24f, 0.79f, 0.53f);
+        // Espectro da luz ambiente
+        vec3 Ia = vec3(0.24f, 0.79f, 0.53f);
 
-    // Equação de Iluminação
-    vec3 lambert_diffuse_term = Kd * I * max(0, dot(n, l));
-    vec3 ambient_term = Ka * Ia;
-    vec3 phong_specular_term  = Ks * I * pow(max(0, dot(n, h)), q);
+        // Equação de Iluminação
+        vec3 lambert_diffuse_term = Kd * I * max(0, dot(n, l));
+        vec3 ambient_term = Ka * Ia;
+        vec3 phong_specular_term  = Ks * I * pow(max(0, dot(n, h)), q);
 
-    color.rgb = lambert_diffuse_term + ambient_term + phong_specular_term;
+        color.rgb = lambert_diffuse_term + ambient_term + phong_specular_term;
+    }
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:
