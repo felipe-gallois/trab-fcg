@@ -21,6 +21,7 @@ find_package(OpenGL REQUIRED)
 
 add_subdirectory(src)
 add_subdirectory(lib)
+add_subdirectory(assets)
 
 target_include_directories(
     ${PROJECT_NAME}
@@ -36,4 +37,6 @@ target_link_libraries(
     tiny_obj_loader
     OpenGL::GL
 )
+
+add_dependencies(${PROJECT_NAME} copy_shaders)
 
