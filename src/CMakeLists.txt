@@ -1,6 +1,7 @@
 add_executable(
     ${PROJECT_NAME}
     main.cpp
+    collisions.cpp
 )
 
 # Add a custom command to copy the assets directory
