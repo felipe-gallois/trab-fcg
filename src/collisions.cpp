@@ -11,6 +11,6 @@
 #include "collisions.hpp"
 
 float CalculateAABBToPlaneCollisionTime(float plane_height, float bbox_min_height, float vel) {
-    return (bbox_min_height - plane_height) / vel;
+    return (plane_height - bbox_min_height) / vel;
 }
 

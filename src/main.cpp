@@ -49,8 +49,8 @@
 #include "matrices.h"
 #include "collisions.hpp"
 
-// Constante que define a velocidade da gravidade
-#define GRAVITY 80.0f
+// Constante que define a aceleração da gravidade
+#define GRAVITY -80.0f
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -127,6 +127,7 @@ GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
 void LoadShader(const char* filename, GLuint shader_id); // Função utilizada pelas duas acima
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Cria um programa de GPU
+void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t); // Computa os efeitos da gravidade
 void PrintObjModelInfo(ObjModel*); // Função para debugging
 
 // Funções callback para comunicação com o sistema operacional e interação do
@@ -190,7 +191,7 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // renderização.
 float g_CameraTheta = -1.6f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.25f;   // Ângulo em relação ao eixo Y
-float g_CameraDistance = 15.0f; // Distância da câmera para a origem
+float g_CameraDistance = 55.0f; // Distância da câmera para a origem
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint g_GpuProgramID = 0;
@@ -303,17 +304,18 @@ int main(int argc, char* argv[])
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
     // Contruímos a estrutura que armazena as posições das árvores no plano
-    std::vector<std::pair<float, float>> tree_pos = {
+    std::vector<glm::vec2> tree_properties = {
+        //   X       Z
         {   3.0f,   4.0f },
         {  12.0f,   4.0f },
         {   3.0f,  12.0f },
     };
 
     // Contruímos a estrutura que armazena as propriedades dos cavaleiros
-    std::vector<std::tuple<float, float, float, float>> knight_properties = {
-        //   X       Y       Z      grav. vel.
-        {  -2.0f,   5.0f,   0.0f,    0.0f },
-        {   0.0f,  15.0f,   2.0f,    0.0f },
+    std::vector<std::tuple<glm::vec3, glm::vec3>> knight_properties = {
+        //          position                      speed
+        { {  -2.0f,   5.0f,   0.0f }, {   0.0f,   0.0f,   0.0f } },
+        { {   0.0f,  15.0f,   2.0f }, {   0.0f,   0.0f,   0.0f } },
     };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
@@ -405,29 +407,13 @@ int main(int argc, char* argv[])
         delta_t = current_time - prev_time;
         prev_time = current_time;
 
-        // Desenhamos o modelo do cavaleiro
-        for (auto& [knight_x, knight_y, knight_z, grav_vel] : knight_properties) {
-            // FIXME: não vai funcionar quando o cavaleiro puder pular
-            // Calculamos a velocidade do cavaleiro no fim do intervalo de tempo
-            float end_vel = grav_vel + delta_t * GRAVITY;
-
-            // Calculamos a velocidade média do cavaleiro no intervalo de tempo
-            float avg_vel = (grav_vel + end_vel) / 2;
-
-            // Atualizamos a nova velocidade do cavaleiro
-            grav_vel = end_vel;
-
-            // Calculamos o efeito da gravidade sobre o cavaleiro
-            float time_to_collision = CalculateAABBToPlaneCollisionTime(
-                    g_VirtualScene["object_0"].bbox_max.y,
-                    g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y + knight_y,
-                    avg_vel
-            );
-            float fall_time = std::min(time_to_collision, delta_t);
-            knight_y -= fall_time * avg_vel;
+        // Desenhamos os modelos dos cavaleiros
+        for (auto& [pos, vel] : knight_properties) {
+            // Aplicamos os efeitos da gravidade no modelo
+            ComputeGravity(pos, vel, delta_t);
 
             // Aplicamos as transformações e desenhamos
-            model = Matrix_Translate(knight_x, knight_y, knight_z);
+            model = Matrix_Translate(pos.x, pos.y, pos.z);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, SWORD);
             DrawVirtualObject("Object_02fade37.jpg");
@@ -439,8 +425,8 @@ int main(int argc, char* argv[])
 
         // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
-        for (const auto [tree_x, tree_z] : tree_pos) {
-            model = Matrix_Translate(tree_x, tree_y, tree_z)
+        for (const auto pos : tree_properties) {
+            model = Matrix_Translate(pos.x, tree_y, pos.y)
                     * Matrix_Scale(g_TreeScaleX, g_TreeScaleY, g_TreeScaleZ);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, TREE);
@@ -982,6 +968,31 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
 
     // Retornamos o ID gerado acima
     return program_id;
+}
+
+// Função que aplica os efeitos da gravidade e testes de colisão sobre o cavaleiro
+void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t) {
+    // Calculamos a potencial velocidade do cavaleiro no fim do intervalo de tempo
+    float end_vel = vel.y + delta_t * GRAVITY;
+
+    // Calculamos a potencial velocidade média do cavaleiro no intervalo de tempo
+    float avg_vel = (vel.y + end_vel) / 2;
+
+    // Calculamos o efeito da gravidade sobre o cavaleiro
+    float time_to_collision = CalculateAABBToPlaneCollisionTime(
+            g_VirtualScene["object_0"].bbox_max.y,
+            g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y + pos.y,
+            avg_vel
+    );
+    float fall_time = std::min(time_to_collision, delta_t);
+    pos.y += fall_time * avg_vel;
+
+    // Atualizamos a nova velocidade do cavaleiro
+    if (fall_time == delta_t) {
+        vel.y = end_vel;
+    } else {
+        vel.y = 0.0f;
+    }
 }
 
 // Definição da função que será chamada sempre que a janela do sistema
