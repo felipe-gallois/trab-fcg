@@ -121,6 +121,7 @@ void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação
 void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso não existam.
 void LoadShadersFromFiles(); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 void LoadTextureImage(const char* filename); // Função que carrega imagens de textura
+void ScalePlaneModelAndTexCoords(ObjModel* model); // Escala as coordenadas da malha e da textura do plano
 void DrawVirtualObject(const char* object_name); // Desenha um objeto armazenado em g_VirtualScene
 GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
@@ -183,6 +184,9 @@ float g_TreeScaleZ = 2.0f;
 float g_PlaneX = 0.0f;
 float g_PlaneY = 0.0f;
 float g_PlaneZ = 0.0f;
+
+// Escala do plano
+float g_PlaneScale = 3.0f;
 
 // "g_LeftMouseButtonPressed = true" se o usuário está com o botão esquerdo do mouse
 // pressionado no momento atual. Veja função MouseButtonCallback().
@@ -304,6 +308,7 @@ int main(int argc, char* argv[])
     BuildTrianglesAndAddToVirtualScene(&treemodel);
 
     ObjModel planemodel("assets/3d0113f9558947579a5d7926f087cc6a_obj/model.obj");
+    ScalePlaneModelAndTexCoords(&planemodel); // Escalamos o plano e suas coordenadas de textura
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
@@ -480,8 +485,8 @@ void LoadTextureImage(const char* filename)
     glGenSamplers(1, &sampler_id);
 
     // Veja slides 95-96 do documento Aula_20_Mapeamento_de_Texturas.pdf
-    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     // Parâmetros de amostragem da textura.
     glSamplerParameteri(sampler_id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -503,6 +508,18 @@ void LoadTextureImage(const char* filename)
     stbi_image_free(data);
 
     g_NumLoadedTextures += 1;
+}
+
+// Função que escala o modelo do plano e suas coordenadas de textura de acordo com o parâmetro
+// g_PlaneScale
+void ScalePlaneModelAndTexCoords(ObjModel* model) {
+    for (auto& vertex : model->attrib.vertices) {
+        vertex *= g_PlaneScale;
+    }
+
+    for (auto& texcoord : model->attrib.texcoords) {
+        texcoord *= g_PlaneScale;
+    }
 }
 
 // Função que desenha um objeto armazenado em g_VirtualScene. Veja definição
