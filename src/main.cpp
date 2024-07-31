@@ -50,7 +50,7 @@
 #include "collisions.hpp"
 
 // Constante que define a velocidade da gravidade
-#define GRAVITY 9.0f
+#define GRAVITY 80.0f
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -309,10 +309,11 @@ int main(int argc, char* argv[])
         {   3.0f,  12.0f },
     };
 
-    // Contruímos a estrutura que armazena as posições das árvores no plano
-    std::vector<std::tuple<float, float, float>> knight_pos = {
-        {  -2.0f,  20.0f,   0.0f },
-        {   0.0f,  20.0f,   2.0f },
+    // Contruímos a estrutura que armazena as propriedades dos cavaleiros
+    std::vector<std::tuple<float, float, float, float>> knight_properties = {
+        //   X       Y       Z      grav. vel.
+        {  -2.0f,   5.0f,   0.0f,    0.0f },
+        {   0.0f,  15.0f,   2.0f,    0.0f },
     };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
@@ -405,15 +406,25 @@ int main(int argc, char* argv[])
         prev_time = current_time;
 
         // Desenhamos o modelo do cavaleiro
-        for (auto& [knight_x, knight_y, knight_z] : knight_pos) {
+        for (auto& [knight_x, knight_y, knight_z, grav_vel] : knight_properties) {
+            // FIXME: não vai funcionar quando o cavaleiro puder pular
+            // Calculamos a velocidade do cavaleiro no fim do intervalo de tempo
+            float end_vel = grav_vel + delta_t * GRAVITY;
+
+            // Calculamos a velocidade média do cavaleiro no intervalo de tempo
+            float avg_vel = (grav_vel + end_vel) / 2;
+
+            // Atualizamos a nova velocidade do cavaleiro
+            grav_vel = end_vel;
+
             // Calculamos o efeito da gravidade sobre o cavaleiro
             float time_to_collision = CalculateAABBToPlaneCollisionTime(
                     g_VirtualScene["object_0"].bbox_max.y,
                     g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y + knight_y,
-                    GRAVITY
+                    avg_vel
             );
             float fall_time = std::min(time_to_collision, delta_t);
-            knight_y -= fall_time * GRAVITY;
+            knight_y -= fall_time * avg_vel;
 
             // Aplicamos as transformações e desenhamos
             model = Matrix_Translate(knight_x, knight_y, knight_z);
