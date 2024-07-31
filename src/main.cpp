@@ -165,11 +165,6 @@ std::stack<glm::mat4>  g_MatrixStack;
 // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
 float g_ScreenRatio = 1.0f;
 
-// Posição do cavaleiro
-float g_KnightX = -2.0f;
-float g_KnightY = 20.0f;
-float g_KnightZ = 0.0f;
-
 // Escala da árvore
 float g_TreeScaleX = 3.0f;
 float g_TreeScaleY = 3.0f;
@@ -193,9 +188,9 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // usuário através do mouse (veja função CursorPosCallback()). A posição
 // efetiva da câmera é calculada dentro da função main(), dentro do loop de
 // renderização.
-float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
-float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
-float g_CameraDistance = 3.5f; // Distância da câmera para a origem
+float g_CameraTheta = -1.6f; // Ângulo no plano ZX em relação ao eixo Z
+float g_CameraPhi = 0.25f;   // Ângulo em relação ao eixo Y
+float g_CameraDistance = 15.0f; // Distância da câmera para a origem
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint g_GpuProgramID = 0;
@@ -309,9 +304,15 @@ int main(int argc, char* argv[])
 
     // Contruímos a estrutura que armazena as posições das árvores no plano
     std::vector<std::pair<float, float>> tree_pos = {
-        {  3.0f,  4.0f },
-        { 12.0f,  4.0f },
-        {  3.0f, 12.0f },
+        {   3.0f,   4.0f },
+        {  12.0f,   4.0f },
+        {   3.0f,  12.0f },
+    };
+
+    // Contruímos a estrutura que armazena as posições das árvores no plano
+    std::vector<std::tuple<float, float, float>> knight_pos = {
+        {  -2.0f,  20.0f,   0.0f },
+        {   0.0f,  20.0f,   2.0f },
     };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
@@ -403,28 +404,27 @@ int main(int argc, char* argv[])
         delta_t = current_time - prev_time;
         prev_time = current_time;
 
-        // Calculamos o efeito da gravidade sobre o cavaleiro
-        // printf("%f\n", g_VirtualScene["object_0"].bbox_max.y);
-        // printf("%f\n", g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y);
-        // printf("\n");
-        float time_to_collision = CalculateAABBToPlaneCollisionTime(
-                g_VirtualScene["object_0"].bbox_max.y,
-                g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y + g_KnightY,
-                GRAVITY
-        );
-        float fall_time = std::min(time_to_collision, delta_t);
-        g_KnightY -= fall_time * GRAVITY;
-        // printf("%f\n", delta_t);
-
         // Desenhamos o modelo do cavaleiro
-        model = Matrix_Translate(g_KnightX, g_KnightY, g_KnightZ);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SWORD);
-        DrawVirtualObject("Object_02fade37.jpg");
-        glUniform1i(g_object_id_uniform, ARMOUR);
-        DrawVirtualObject("Object_5049cba8.jpg");
-        glUniform1i(g_object_id_uniform, SHIELD);
-        DrawVirtualObject("Object_6977716c.jpg");
+        for (auto& [knight_x, knight_y, knight_z] : knight_pos) {
+            // Calculamos o efeito da gravidade sobre o cavaleiro
+            float time_to_collision = CalculateAABBToPlaneCollisionTime(
+                    g_VirtualScene["object_0"].bbox_max.y,
+                    g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y + knight_y,
+                    GRAVITY
+            );
+            float fall_time = std::min(time_to_collision, delta_t);
+            knight_y -= fall_time * GRAVITY;
+
+            // Aplicamos as transformações e desenhamos
+            model = Matrix_Translate(knight_x, knight_y, knight_z);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, SWORD);
+            DrawVirtualObject("Object_02fade37.jpg");
+            glUniform1i(g_object_id_uniform, ARMOUR);
+            DrawVirtualObject("Object_5049cba8.jpg");
+            glUniform1i(g_object_id_uniform, SHIELD);
+            DrawVirtualObject("Object_6977716c.jpg");
+        }
 
         // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
