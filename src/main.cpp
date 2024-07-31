@@ -170,15 +170,10 @@ float g_KnightX = -2.0f;
 float g_KnightY = 20.0f;
 float g_KnightZ = 0.0f;
 
-// Posição da árvore
-float g_TreeX = 1.0f;
-float g_TreeY = 3.0f;
-float g_TreeZ = 0.0f;
-
 // Escala da árvore
-float g_TreeScaleX = 2.0f;
-float g_TreeScaleY = 2.0f;
-float g_TreeScaleZ = 2.0f;
+float g_TreeScaleX = 3.0f;
+float g_TreeScaleY = 3.0f;
+float g_TreeScaleZ = 3.0f;
 
 // Posição do plano
 float g_PlaneX = 0.0f;
@@ -312,6 +307,16 @@ int main(int argc, char* argv[])
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
+    // Contruímos a estrutura que armazena as posições das árvores no plano
+    std::vector<std::pair<float, float>> tree_pos = {
+        {  3.0f,  4.0f },
+        { 12.0f,  4.0f },
+        {  3.0f, 12.0f },
+    };
+
+    // Calculamos a altura das árvores para que fiquem logo acima do plano
+    float tree_y = g_PlaneY - g_TreeScaleY * g_VirtualScene["Object_farm_trees_rocks_flowers_D.jpg"].bbox_min.y;
+
     // Habilitamos o Z-buffer. Veja slides 104-116 do documento Aula_09_Projecoes.pdf.
     glEnable(GL_DEPTH_TEST);
 
@@ -421,13 +426,15 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, SHIELD);
         DrawVirtualObject("Object_6977716c.jpg");
 
-        // Desenhamos o modelo da árvore
-        model = Matrix_Translate(g_TreeX, g_TreeY, g_TreeZ)
-                * Matrix_Scale(g_TreeScaleX, g_TreeScaleY, g_TreeScaleZ);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, TREE);
+        // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
-        DrawVirtualObject("Object_farm_trees_rocks_flowers_D.jpg");
+        for (const auto [tree_x, tree_z] : tree_pos) {
+            model = Matrix_Translate(tree_x, tree_y, tree_z)
+                    * Matrix_Scale(g_TreeScaleX, g_TreeScaleY, g_TreeScaleZ);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, TREE);
+            DrawVirtualObject("Object_farm_trees_rocks_flowers_D.jpg");
+        }
         glEnable(GL_CULL_FACE);
 
         // Desenhamos o plano do chão
