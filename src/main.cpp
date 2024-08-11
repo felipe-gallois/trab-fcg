@@ -49,8 +49,11 @@
 #include "matrices.h"
 #include "collisions.hpp"
 
+// Constante que define a velocidade de movimentação
+#define MOV_SPEED 8.0f
+
 // Constante que define a aceleração da gravidade
-#define GRAVITY -80.0f
+#define GRAVITY 80.0f
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -122,6 +125,8 @@ void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso n�
 void LoadShadersFromFiles(); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 void LoadTextureImage(const char* filename); // Função que carrega imagens de textura
 void ScalePlaneModelAndTexCoords(ObjModel* model); // Escala as coordenadas da malha e da textura do plano
+void UpdatePlayerMovementSpeed(float delta_t); // Atualiza a velocidade do jogador
+void UpdatePlayerPosition(); // Atualiza a posição do jogador, após computada a velocidade
 void DrawVirtualObject(const char* object_name); // Desenha um objeto armazenado em g_VirtualScene
 GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
@@ -179,11 +184,32 @@ float g_PlaneZ = 0.0f;
 // Escala do plano
 float g_PlaneScale = 3.0f;
 
+// Posição do jogador
+glm::vec3 g_PlayerPos;
+
+// Rotação do jogador
+glm::vec3 g_PlayerRot = {   0.0f,   0.785f,   0.0f };
+
+// Velocidade do jogador
+glm::vec4 g_ForwardSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
+glm::vec4 g_RightSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
+
+// Posição do adversário
+glm::vec3 g_EnemyPos = {   0.0f,  15.0f,   2.0f };
+
+// Velocidade do adversário
+glm::vec3 g_EnemySpeed = {   0.0f,   0.0f,   0.0f };
+
+// Se o usuário estiver com teclas do teclado pressionadas
+bool g_WKeyPressed = false;
+bool g_AKeyPressed = false;
+bool g_SKeyPressed = false;
+bool g_DKeyPressed = false;
+
 // "g_LeftMouseButtonPressed = true" se o usuário está com o botão esquerdo do mouse
 // pressionado no momento atual. Veja função MouseButtonCallback().
 bool g_LeftMouseButtonPressed = false;
 bool g_RightMouseButtonPressed = false; // Análogo para botão direito do mouse
-bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mouse
 
 // Variáveis que definem a câmera em coordenadas esféricas, controladas pelo
 // usuário através do mouse (veja função CursorPosCallback()). A posição
@@ -311,13 +337,9 @@ int main(int argc, char* argv[])
         {   3.0f,  12.0f },
     };
 
+    // Configura posição inicial do jogador
     float playerSize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
-
-    glm::vec3 playerPos = {  -2.0f,   0.0f + playerSize/2,   0.0f };
-    glm::vec3 playerSpeed = {   0.0f,   0.0f,   0.0f };
-
-    glm::vec3 enemyPos = {   0.0f,  15.0f,   2.0f };
-    glm::vec3 enemySpeed = {   0.0f,   0.0f,   0.0f };
+    g_PlayerPos = {  -2.0f,   0.0f + playerSize/2,   0.0f };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
     float tree_y = g_PlaneY - g_TreeScaleY * g_VirtualScene["Object_farm_trees_rocks_flowers_D.jpg"].bbox_min.y;
@@ -409,10 +431,10 @@ int main(int argc, char* argv[])
         prev_time = current_time;
 
         // Computamos o efeito da gravidade com colisões no adversário
-        ComputeGravity(enemyPos, enemySpeed, delta_t);
+        ComputeGravity(g_EnemyPos, g_EnemySpeed, delta_t);
 
-        // Aplicamos as transformações e desenhamos
-        model = Matrix_Translate(enemyPos.x, enemyPos.y, enemyPos.z);
+        // Aplicamos as transformações e desenhamos o adversário
+        model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SWORD);
         DrawVirtualObject("Object_02fade37.jpg");
@@ -421,8 +443,17 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, SHIELD);
         DrawVirtualObject("Object_6977716c.jpg");
 
-        // Aplicamos as transformações e desenhamos
-        model = Matrix_Translate(playerPos.x, playerPos.y, playerPos.z);
+        // Atualizamos a velocidade do jogador
+        UpdatePlayerMovementSpeed(delta_t);
+
+        // Atualizamos a posição do jogador, após computada a velocidade
+        UpdatePlayerPosition();
+
+        // Aplicamos as transformações e desenhamos o jogador
+        model = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
+                * Matrix_Rotate_X(g_PlayerRot.x)
+                * Matrix_Rotate_Y(g_PlayerRot.y)
+                * Matrix_Rotate_Z(g_PlayerRot.z);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SWORD);
         DrawVirtualObject("Object_02fade37.jpg");
@@ -532,6 +563,39 @@ void ScalePlaneModelAndTexCoords(ObjModel* model) {
     for (auto& texcoord : model->attrib.texcoords) {
         texcoord *= g_PlaneScale;
     }
+}
+
+// Atualiza a velocidade do jogador baseado nas teclas do movimentação pressionadas
+void UpdatePlayerMovementSpeed(float delta_t) {
+    g_ForwardSpeed = { 0.0f, 0.0f, 0.0f, 0.0f };
+    g_RightSpeed = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+    glm::mat4 rotation_matrix = Matrix_Rotate_Y(g_PlayerRot.y);
+
+    glm::vec4 forward_direction = rotation_matrix * glm::vec4( -MOV_SPEED, 0.0f, 0.0f, 0.0f );
+    glm::vec4 right_direction = rotation_matrix * glm::vec4( 0.0f, 0.0f, -MOV_SPEED, 0.0f );
+
+    if (g_WKeyPressed) {
+        g_ForwardSpeed += delta_t * forward_direction; 
+    }
+
+    if (g_AKeyPressed) {
+        g_RightSpeed -= delta_t * right_direction;
+    }
+
+    if (g_SKeyPressed) {
+        g_ForwardSpeed -= delta_t * forward_direction;
+    }
+
+    if (g_DKeyPressed) {
+        g_RightSpeed += delta_t * right_direction;
+    }
+}
+
+// Atualiza a posição do jogador, após computada a velocidade
+void UpdatePlayerPosition() {
+    g_PlayerPos += g_ForwardSpeed;
+    g_PlayerPos += g_RightSpeed;
 }
 
 // Função que desenha um objeto armazenado em g_VirtualScene. Veja definição
@@ -981,7 +1045,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
 // Função que aplica os efeitos da gravidade e testes de colisão sobre o cavaleiro
 void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t) {
     // Calculamos a potencial velocidade do cavaleiro no fim do intervalo de tempo
-    float end_vel = vel.y + delta_t * GRAVITY;
+    float end_vel = vel.y - delta_t * GRAVITY;
 
     // Calculamos a potencial velocidade média do cavaleiro no intervalo de tempo
     float avg_vel = (vel.y + end_vel) / 2;
@@ -1064,22 +1128,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // variável abaixo para false.
         g_RightMouseButtonPressed = false;
     }
-    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
-    {
-        // Se o usuário pressionou o botão esquerdo do mouse, guardamos a
-        // posição atual do cursor nas variáveis g_LastCursorPosX e
-        // g_LastCursorPosY.  Também, setamos a variável
-        // g_MiddleMouseButtonPressed como true, para saber que o usuário está
-        // com o botão esquerdo pressionado.
-        glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
-        g_MiddleMouseButtonPressed = true;
-    }
-    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
-    {
-        // Quando o usuário soltar o botão esquerdo do mouse, atualizamos a
-        // variável abaixo para false.
-        g_MiddleMouseButtonPressed = false;
-    }
 }
 
 // Função callback chamada sempre que o usuário movimentar o cursor do mouse em
@@ -1129,18 +1177,6 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         g_LastCursorPosX = xpos;
         g_LastCursorPosY = ypos;
     }
-
-    if (g_MiddleMouseButtonPressed)
-    {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
-    }
 }
 
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
@@ -1178,12 +1214,56 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     float delta = 3.141592 / 16; // 22.5 graus, em radianos.
 
-    // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
-    if (key == GLFW_KEY_R && action == GLFW_PRESS)
+    // Registra se o usuário pressionou ou soltou W
+    if (key == GLFW_KEY_W)
     {
-        LoadShadersFromFiles();
-        fprintf(stdout,"Shaders recarregados!\n");
-        fflush(stdout);
+        switch (action) {
+            case GLFW_PRESS:
+                g_WKeyPressed = true;
+                break;
+            case GLFW_RELEASE:
+                g_WKeyPressed = false;
+                break;
+        }
+    }
+
+    // Registra se o usuário pressionou ou soltou A
+    if (key == GLFW_KEY_A)
+    {
+        switch (action) {
+            case GLFW_PRESS:
+                g_AKeyPressed = true;
+                break;
+            case GLFW_RELEASE:
+                g_AKeyPressed = false;
+                break;
+        }
+    }
+
+    // Registra se o usuário pressionou ou soltou S
+    if (key == GLFW_KEY_S)
+    {
+        switch (action) {
+            case GLFW_PRESS:
+                g_SKeyPressed = true;
+                break;
+            case GLFW_RELEASE:
+                g_SKeyPressed = false;
+                break;
+        }
+    }
+
+    // Registra se o usuário pressionou ou soltou D
+    if (key == GLFW_KEY_D)
+    {
+        switch (action) {
+            case GLFW_PRESS:
+                g_DKeyPressed = true;
+                break;
+            case GLFW_RELEASE:
+                g_DKeyPressed = false;
+                break;
+        }
     }
 }
 
