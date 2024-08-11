@@ -304,19 +304,20 @@ int main(int argc, char* argv[])
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
     // Contruímos a estrutura que armazena as posições das árvores no plano
-    std::vector<glm::vec2> tree_properties = {
+    std::vector<glm::vec2> tree_pos = {
         //   X       Z
         {   3.0f,   4.0f },
         {  12.0f,   4.0f },
         {   3.0f,  12.0f },
     };
 
-    // Contruímos a estrutura que armazena as propriedades dos cavaleiros
-    std::vector<std::tuple<glm::vec3, glm::vec3>> knight_properties = {
-        //          position                      speed
-        { {  -2.0f,   5.0f,   0.0f }, {   0.0f,   0.0f,   0.0f } },
-        { {   0.0f,  15.0f,   2.0f }, {   0.0f,   0.0f,   0.0f } },
-    };
+    float playerSize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
+
+    glm::vec3 playerPos = {  -2.0f,   0.0f + playerSize/2,   0.0f };
+    glm::vec3 playerSpeed = {   0.0f,   0.0f,   0.0f };
+
+    glm::vec3 enemyPos = {   0.0f,  15.0f,   2.0f };
+    glm::vec3 enemySpeed = {   0.0f,   0.0f,   0.0f };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
     float tree_y = g_PlaneY - g_TreeScaleY * g_VirtualScene["Object_farm_trees_rocks_flowers_D.jpg"].bbox_min.y;
@@ -407,25 +408,32 @@ int main(int argc, char* argv[])
         delta_t = current_time - prev_time;
         prev_time = current_time;
 
-        // Desenhamos os modelos dos cavaleiros
-        for (auto& [pos, vel] : knight_properties) {
-            // Aplicamos os efeitos da gravidade no modelo
-            ComputeGravity(pos, vel, delta_t);
+        // Computamos o efeito da gravidade com colisões no adversário
+        ComputeGravity(enemyPos, enemySpeed, delta_t);
 
-            // Aplicamos as transformações e desenhamos
-            model = Matrix_Translate(pos.x, pos.y, pos.z);
-            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, SWORD);
-            DrawVirtualObject("Object_02fade37.jpg");
-            glUniform1i(g_object_id_uniform, ARMOUR);
-            DrawVirtualObject("Object_5049cba8.jpg");
-            glUniform1i(g_object_id_uniform, SHIELD);
-            DrawVirtualObject("Object_6977716c.jpg");
-        }
+        // Aplicamos as transformações e desenhamos
+        model = Matrix_Translate(enemyPos.x, enemyPos.y, enemyPos.z);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, SWORD);
+        DrawVirtualObject("Object_02fade37.jpg");
+        glUniform1i(g_object_id_uniform, ARMOUR);
+        DrawVirtualObject("Object_5049cba8.jpg");
+        glUniform1i(g_object_id_uniform, SHIELD);
+        DrawVirtualObject("Object_6977716c.jpg");
+
+        // Aplicamos as transformações e desenhamos
+        model = Matrix_Translate(playerPos.x, playerPos.y, playerPos.z);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, SWORD);
+        DrawVirtualObject("Object_02fade37.jpg");
+        glUniform1i(g_object_id_uniform, ARMOUR);
+        DrawVirtualObject("Object_5049cba8.jpg");
+        glUniform1i(g_object_id_uniform, SHIELD);
+        DrawVirtualObject("Object_6977716c.jpg");
 
         // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
-        for (const auto pos : tree_properties) {
+        for (const auto pos : tree_pos) {
             model = Matrix_Translate(pos.x, tree_y, pos.y)
                     * Matrix_Scale(g_TreeScaleX, g_TreeScaleY, g_TreeScaleZ);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
