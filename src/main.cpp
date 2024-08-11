@@ -125,8 +125,8 @@ void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso n�
 void LoadShadersFromFiles(); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 void LoadTextureImage(const char* filename); // Função que carrega imagens de textura
 void ScalePlaneModelAndTexCoords(ObjModel* model); // Escala as coordenadas da malha e da textura do plano
-void UpdatePlayerMovementSpeed(float delta_t); // Atualiza a velocidade do jogador
-void UpdatePlayerPosition(); // Atualiza a posição do jogador, após computada a velocidade
+void UpdatePlayerMovementSpeed(); // Atualiza a velocidade do jogador
+void UpdatePlayerPosition(float delta_t); // Atualiza a posição do jogador, após computada a velocidade
 void DrawVirtualObject(const char* object_name); // Desenha um objeto armazenado em g_VirtualScene
 GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
@@ -191,8 +191,7 @@ glm::vec3 g_PlayerPos;
 glm::vec3 g_PlayerRot = {   0.0f,   0.785f,   0.0f };
 
 // Velocidade do jogador
-glm::vec4 g_ForwardSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
-glm::vec4 g_RightSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
+glm::vec4 g_PlayerSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
 
 // Posição do adversário
 glm::vec3 g_EnemyPos = {   0.0f,  15.0f,   2.0f };
@@ -444,10 +443,10 @@ int main(int argc, char* argv[])
         DrawVirtualObject("Object_6977716c.jpg");
 
         // Atualizamos a velocidade do jogador
-        UpdatePlayerMovementSpeed(delta_t);
+        UpdatePlayerMovementSpeed();
 
         // Atualizamos a posição do jogador, após computada a velocidade
-        UpdatePlayerPosition();
+        UpdatePlayerPosition(delta_t);
 
         // Aplicamos as transformações e desenhamos o jogador
         model = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
@@ -566,36 +565,38 @@ void ScalePlaneModelAndTexCoords(ObjModel* model) {
 }
 
 // Atualiza a velocidade do jogador baseado nas teclas do movimentação pressionadas
-void UpdatePlayerMovementSpeed(float delta_t) {
-    g_ForwardSpeed = { 0.0f, 0.0f, 0.0f, 0.0f };
-    g_RightSpeed = { 0.0f, 0.0f, 0.0f, 0.0f };
+void UpdatePlayerMovementSpeed() {
+    g_PlayerSpeed = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     glm::mat4 rotation_matrix = Matrix_Rotate_Y(g_PlayerRot.y);
 
-    glm::vec4 forward_direction = rotation_matrix * glm::vec4( -MOV_SPEED, 0.0f, 0.0f, 0.0f );
-    glm::vec4 right_direction = rotation_matrix * glm::vec4( 0.0f, 0.0f, -MOV_SPEED, 0.0f );
+    glm::vec4 forward_direction = rotation_matrix * glm::vec4( -1.0f, 0.0f, 0.0f, 0.0f );
+    glm::vec4 right_direction = rotation_matrix * glm::vec4( 0.0f, 0.0f, -1.0f, 0.0f );
 
     if (g_WKeyPressed) {
-        g_ForwardSpeed += delta_t * forward_direction; 
+        g_PlayerSpeed += forward_direction; 
     }
 
     if (g_AKeyPressed) {
-        g_RightSpeed -= delta_t * right_direction;
+        g_PlayerSpeed -= right_direction;
     }
 
     if (g_SKeyPressed) {
-        g_ForwardSpeed -= delta_t * forward_direction;
+        g_PlayerSpeed -= forward_direction;
     }
 
     if (g_DKeyPressed) {
-        g_RightSpeed += delta_t * right_direction;
+        g_PlayerSpeed += right_direction;
+    }
+
+    if (g_PlayerSpeed != glm::vec4(0.0f)) {
+        g_PlayerSpeed = glm::normalize(g_PlayerSpeed) * MOV_SPEED;
     }
 }
 
 // Atualiza a posição do jogador, após computada a velocidade
-void UpdatePlayerPosition() {
-    g_PlayerPos += g_ForwardSpeed;
-    g_PlayerPos += g_RightSpeed;
+void UpdatePlayerPosition(float delta_t) {
+    g_PlayerPos += g_PlayerSpeed * delta_t;
 }
 
 // Função que desenha um objeto armazenado em g_VirtualScene. Veja definição
