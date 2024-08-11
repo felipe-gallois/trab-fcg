@@ -177,9 +177,9 @@ std::stack<glm::mat4>  g_MatrixStack;
 float g_ScreenRatio = 1.0f;
 
 // Escala da árvore
-float g_TreeScaleX = 3.0f;
-float g_TreeScaleY = 3.0f;
-float g_TreeScaleZ = 3.0f;
+float g_TreeScaleX = 5.0f;
+float g_TreeScaleY = 5.0f;
+float g_TreeScaleZ = 5.0f;
 
 // Posição do plano
 float g_PlaneX = 0.0f;
@@ -187,7 +187,7 @@ float g_PlaneY = 0.0f;
 float g_PlaneZ = 0.0f;
 
 // Escala do plano
-float g_PlaneScale = 3.0f;
+float g_PlaneScale = 5.0f;
 
 // Posição do jogador
 glm::vec4 g_PlayerPos;
@@ -335,7 +335,9 @@ int main(int argc, char* argv[])
         //   X       Z
         {   3.0f,   4.0f },
         {  12.0f,   4.0f },
-        {   3.0f,  12.0f },
+        {   40.0f,  12.0f },
+        {   3.0f,  50.0f },
+        {   30.0f,  12.0f },
     };
 
     // Configura posição inicial do jogador
@@ -1177,20 +1179,6 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 // tecla do teclado. Veja http://www.glfw.org/docs/latest/input_guide.html#input_key
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 {
-    // ====================
-    // Não modifique este loop! Ele é utilizando para correção automatizada dos
-    // laboratórios. Deve ser sempre o primeiro comando desta função KeyCallback().
-    for (int i = 0; i < 10; ++i)
-        if (key == GLFW_KEY_0 + i && action == GLFW_PRESS && mod == GLFW_MOD_SHIFT)
-            std::exit(100 + i);
-    // ====================
-
-    // Se o usuário pressionar a tecla ESC, fechamos a janela.
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
-
-    float delta = 3.141592 / 16; // 22.5 graus, em radianos.
-
     // Registra se o usuário pressionou ou soltou W
     if (key == GLFW_KEY_W)
     {

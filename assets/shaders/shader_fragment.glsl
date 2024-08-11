@@ -86,17 +86,17 @@ void main()
 
     if (object_id == SWORD) {
         Kd = texture(TextureImage0, vec2(U,V)).rgb;
-        Ka = Kd * 0.2f;
+        Ka = Kd * 0.5f;
         Ks = vec3(0.1f, 0.1f, 0.1f);
         q = 40.0f;
     } else if (object_id == ARMOUR) {
         Kd = texture(TextureImage1, vec2(U,V)).rgb;
-        Ka = Kd * 0.2f;
+        Ka = Kd * 0.5f;
         Ks = vec3(0.1f, 0.1f, 0.1f);
         q = 40.0f;
     } else if (object_id == SHIELD) {
         Kd = texture(TextureImage2, vec2(U,V)).rgb;
-        Ka = Kd * 0.2f;
+        Ka = Kd * 0.5f;
         Ks = vec3(0.1f, 0.1f, 0.1f);
         q = 40.0f;
     } else if (object_id == PLANE) {
@@ -118,7 +118,7 @@ void main()
         vec3 I = vec3(0.99f, 1.00f, 0.91f);
 
         // Espectro da luz ambiente
-        vec3 Ia = vec3(0.24f, 0.79f, 0.53f);
+        vec3 Ia = vec3(0.99f, 1.00f, 0.91f);
 
         // Equação de Iluminação
         vec3 lambert_diffuse_term = Kd * I * max(0, dot(n, l));
