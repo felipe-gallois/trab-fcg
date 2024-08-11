@@ -183,7 +183,7 @@ float g_PlaneZ = 0.0f;
 float g_PlaneScale = 3.0f;
 
 // Posição do jogador
-glm::vec3 g_PlayerPos;
+glm::vec4 g_PlayerPos;
 
 // Rotação do jogador
 glm::vec3 g_PlayerRot = {   0.0f,   0.785f,   0.0f };
@@ -196,6 +196,9 @@ glm::vec3 g_EnemyPos = {   0.0f,  15.0f,   2.0f };
 
 // Velocidade do adversário
 glm::vec3 g_EnemySpeed = {   0.0f,   0.0f,   0.0f };
+
+// Se a câmera atual é look-at
+bool g_CameraLookAt = false;
 
 // Se o usuário estiver com teclas do teclado pressionadas
 bool g_WKeyPressed = false;
@@ -324,7 +327,7 @@ int main(int argc, char* argv[])
 
     // Configura posição inicial do jogador
     float playerSize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
-    g_PlayerPos = {  -2.0f,   0.0f + playerSize/2,   0.0f };
+    g_PlayerPos = { -2.0f, 0.0f + playerSize/2, 0.0f, 1.0f };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
     float tree_y = g_PlaneY - g_TreeScaleY * g_VirtualScene["Object_farm_trees_rocks_flowers_D.jpg"].bbox_min.y;
@@ -363,19 +366,35 @@ int main(int argc, char* argv[])
         // os shaders de vértice e fragmentos).
         glUseProgram(g_GpuProgramID);
 
-        // Definimos o ponto "c" do centro da câmera para a câmera look-at
-        glm::vec4 relative_position = glm::vec4(7.5f, 3.0f, 0.0f, 1.0f);
-        glm::mat4 camera_transform = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
-                                     * Matrix_Rotate_X(g_PlayerRot.x)
-                                     * Matrix_Rotate_Y(g_PlayerRot.y)
-                                     * Matrix_Rotate_Z(g_PlayerRot.z);
-
-        // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
-        // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::vec4 camera_position_c  = camera_transform * relative_position; // Ponto "c", centro da câmera
-        glm::vec4 camera_lookat_l    = glm::vec4(g_PlayerPos, 1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
-        glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
+        // Parâmetros que definem a câmera
+        glm::vec4 camera_position_c;
+        glm::vec4 camera_view_vector;
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
+
+        // Testamos se a câmera é look-at ou livre
+        if (g_CameraLookAt) {
+            // Definimos o ponto "c" do centro da câmera para a câmera look-at
+            glm::vec4 relative_position = glm::vec4(7.5f, 3.0f, 0.0f, 1.0f);
+            glm::mat4 camera_transform = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
+                                         * Matrix_Rotate_X(g_PlayerRot.x)
+                                         * Matrix_Rotate_Y(g_PlayerRot.y)
+                                         * Matrix_Rotate_Z(g_PlayerRot.z);
+
+            // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
+            // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
+            camera_position_c  = camera_transform * relative_position; // Ponto "c", centro da câmera
+            glm::vec4 camera_lookat_l    = g_PlayerPos; // Ponto "l", para onde a câmera (look-at) estará sempre olhando
+            camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
+        } else {
+            glm::vec4 view_vector = glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f);
+            glm::mat4 camera_transfrom = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
+                                         * Matrix_Rotate_X(g_PlayerRot.x)
+                                         * Matrix_Rotate_Y(g_PlayerRot.y)
+                                         * Matrix_Rotate_Z(g_PlayerRot.z);
+
+            camera_position_c = g_PlayerPos + glm::vec4(0.0f, playerSize*0.4, 0.0f, 0.0f);
+            camera_view_vector = camera_transfrom * view_vector;
+        }
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
@@ -440,8 +459,12 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SWORD);
         DrawVirtualObject("Object_02fade37.jpg");
-        glUniform1i(g_object_id_uniform, ARMOUR);
-        DrawVirtualObject("Object_5049cba8.jpg");
+
+        if (g_CameraLookAt) {   // Não desenha armadura se câmera for livre
+            glUniform1i(g_object_id_uniform, ARMOUR);
+            DrawVirtualObject("Object_5049cba8.jpg");
+        }
+
         glUniform1i(g_object_id_uniform, SHIELD);
         DrawVirtualObject("Object_6977716c.jpg");
 
@@ -1183,6 +1206,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
                 g_DKeyPressed = false;
                 break;
         }
+    }
+
+    // Alterna câmera livre e look-at
+    if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
+    {
+        g_CameraLookAt = !g_CameraLookAt; 
     }
 }
 
