@@ -55,6 +55,12 @@
 // Constante que define a aceleração da gravidade
 #define GRAVITY 80.0f
 
+// Constante que define a sensibilidade do mouse
+#define SENSITIVITY 0.0025f
+
+// Constante que define a distância para o jogador da câmera look-at
+#define LOOKAT_CAMERA_DIST 10.0f
+
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
 struct ObjModel
@@ -141,6 +147,7 @@ void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void ErrorCallback(int error, const char* description);
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -185,9 +192,6 @@ float g_PlaneScale = 3.0f;
 // Posição do jogador
 glm::vec4 g_PlayerPos;
 
-// Rotação do jogador
-glm::vec3 g_PlayerRot = {   0.0f,   0.785f,   0.0f };
-
 // Velocidade do jogador
 glm::vec4 g_PlayerSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
 
@@ -199,6 +203,10 @@ glm::vec3 g_EnemySpeed = {   0.0f,   0.0f,   0.0f };
 
 // Se a câmera atual é look-at
 bool g_CameraLookAt = false;
+
+// Parâmetros yaw e pitch da câmera 
+float g_Yaw = 0.0f;
+float g_Pitch = 0.0f;
 
 // Se o usuário estiver com teclas do teclado pressionadas
 bool g_WKeyPressed = false;
@@ -260,11 +268,16 @@ int main(int argc, char* argv[])
         std::exit(EXIT_FAILURE);
     }
 
+    // Não exibe o cursor
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+
     // Definimos a função de callback que será chamada sempre que o usuário
     // pressionar alguma tecla do teclado ...
     glfwSetKeyCallback(window, KeyCallback);
     // ... ou clicar os botões do mouse ...
     glfwSetMouseButtonCallback(window, MouseButtonCallback);
+
+    glfwSetCursorPosCallback(window, CursorPosCallback);
 
     // Indicamos que as chamadas OpenGL deverão renderizar nesta janela
     glfwMakeContextCurrent(window);
@@ -369,31 +382,26 @@ int main(int argc, char* argv[])
         // Parâmetros que definem a câmera
         glm::vec4 camera_position_c;
         glm::vec4 camera_view_vector;
-        glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
+
+        // Calculamos o vetor "up", fixado para apontar para o "céu" (eixo Y global)
+        glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f);
 
         // Testamos se a câmera é look-at ou livre
         if (g_CameraLookAt) {
-            // Definimos o ponto "c" do centro da câmera para a câmera look-at
-            glm::vec4 relative_position = glm::vec4(7.5f, 3.0f, 0.0f, 1.0f);
-            glm::mat4 camera_transform = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
-                                         * Matrix_Rotate_X(g_PlayerRot.x)
-                                         * Matrix_Rotate_Y(g_PlayerRot.y)
-                                         * Matrix_Rotate_Z(g_PlayerRot.z);
+            float x = LOOKAT_CAMERA_DIST * cos(g_Pitch) * sin(g_Yaw);
+            float y = LOOKAT_CAMERA_DIST * sin(g_Pitch);
+            float z = LOOKAT_CAMERA_DIST * cos(g_Pitch) * cos(g_Yaw);
 
-            // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
-            // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-            camera_position_c  = camera_transform * relative_position; // Ponto "c", centro da câmera
+            camera_position_c  = glm::vec4(-x, -y, -z,1.0f); // Ponto "c", centro da câmera
             glm::vec4 camera_lookat_l    = g_PlayerPos; // Ponto "l", para onde a câmera (look-at) estará sempre olhando
             camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         } else {
-            glm::vec4 view_vector = glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f);
-            glm::mat4 camera_transfrom = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
-                                         * Matrix_Rotate_X(g_PlayerRot.x)
-                                         * Matrix_Rotate_Y(g_PlayerRot.y)
-                                         * Matrix_Rotate_Z(g_PlayerRot.z);
+            float x = cos(g_Pitch) * cos(g_Yaw);
+            float y = sin(g_Pitch);
+            float z = cos(g_Pitch) * sin(g_Yaw);
 
-            camera_position_c = g_PlayerPos + glm::vec4(0.0f, playerSize*0.4, 0.0f, 0.0f);
-            camera_view_vector = camera_transfrom * view_vector;
+            camera_position_c = g_PlayerPos + glm::vec4(0.0f, playerSize*0.35, 0.0f, 0.0f);
+            camera_view_vector = glm::vec4(-x, -y, z, 0.0f);
         }
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
@@ -453,9 +461,7 @@ int main(int argc, char* argv[])
 
         // Aplicamos as transformações e desenhamos o jogador
         model = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
-                * Matrix_Rotate_X(g_PlayerRot.x)
-                * Matrix_Rotate_Y(g_PlayerRot.y)
-                * Matrix_Rotate_Z(g_PlayerRot.z);
+                * Matrix_Rotate_Y(g_Yaw);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SWORD);
         DrawVirtualObject("Object_02fade37.jpg");
@@ -575,7 +581,7 @@ void ScalePlaneModelAndTexCoords(ObjModel* model) {
 void UpdatePlayerMovementSpeed() {
     g_PlayerSpeed = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    glm::mat4 rotation_matrix = Matrix_Rotate_Y(g_PlayerRot.y);
+    glm::mat4 rotation_matrix = Matrix_Rotate_Y(g_Yaw);
 
     glm::vec4 forward_direction = rotation_matrix * glm::vec4( -1.0f, 0.0f, 0.0f, 0.0f );
     glm::vec4 right_direction = rotation_matrix * glm::vec4( 0.0f, 0.0f, -1.0f, 0.0f );
@@ -1096,11 +1102,6 @@ void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
     g_ScreenRatio = (float)width / height;
 }
 
-// Variáveis globais que armazenam a última posição do cursor do mouse, para
-// que possamos calcular quanto que o mouse se movimentou entre dois instantes
-// de tempo. Utilizadas no callback CursorPosCallback() abaixo.
-double g_LastCursorPosX, g_LastCursorPosY;
-
 // Função callback chamada sempre que o usuário aperta algum dos botões do mouse
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
@@ -1111,7 +1112,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // g_LastCursorPosY.  Também, setamos a variável
         // g_LeftMouseButtonPressed como true, para saber que o usuário está
         // com o botão esquerdo pressionado.
-        glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_LeftMouseButtonPressed = true;
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
@@ -1127,7 +1127,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // g_LastCursorPosY.  Também, setamos a variável
         // g_RightMouseButtonPressed como true, para saber que o usuário está
         // com o botão esquerdo pressionado.
-        glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_RightMouseButtonPressed = true;
     }
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
@@ -1136,6 +1135,39 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // variável abaixo para false.
         g_RightMouseButtonPressed = false;
     }
+}
+
+// Variáveis globais que armazenam a última posição do cursor do mouse, para
+// que possamos calcular quanto que o mouse se movimentou entre dois instantes
+// de tempo. Utilizadas no callback CursorPosCallback() abaixo.
+double g_LastCursorPosX, g_LastCursorPosY;
+
+// Função callback chamada sempre que o usuário movimentar o cursor do mouse em
+// cima da janela OpenGL.
+void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
+{
+    // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
+    float dx = xpos - g_LastCursorPosX;
+    float dy = ypos - g_LastCursorPosY;
+
+    // Atualizamos parâmetros da câmera com os deslocamentos
+    g_Yaw -= SENSITIVITY * dx;
+    g_Pitch   += SENSITIVITY * dy;
+
+    // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
+    float phimax = 3.141592f/2;
+    float phimin = -phimax;
+
+    if (g_Pitch > phimax)
+        g_Pitch = phimax;
+
+    if (g_Pitch < phimin)
+        g_Pitch = phimin;
+
+    // Atualizamos as variáveis globais para armazenar a posição atual do
+    // cursor como sendo a última posição conhecida do cursor.
+    g_LastCursorPosX = xpos;
+    g_LastCursorPosY = ypos;
 }
 
 // Definição da função que será chamada sempre que o usuário pressionar alguma
