@@ -388,14 +388,17 @@ int main(int argc, char* argv[])
 
         // Testamos se a câmera é look-at ou livre
         if (g_CameraLookAt) {
-            float x = LOOKAT_CAMERA_DIST * cos(g_Pitch) * sin(g_Yaw);
-            float y = LOOKAT_CAMERA_DIST * sin(g_Pitch);
-            float z = LOOKAT_CAMERA_DIST * cos(g_Pitch) * cos(g_Yaw);
+            // Aplicamos as mesmas transformações do personagem para determinar o ponto "c"
+            glm::vec4 reference_point = glm::vec4(7.5f, 3.0f, 0.0f, 1.0f);
+            glm::mat4 transform_matrix = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
+                                         * Matrix_Rotate_X(g_Pitch)
+                                         * Matrix_Rotate_Y(g_Yaw);
 
-            camera_position_c  = glm::vec4(-x, -y, -z,1.0f); // Ponto "c", centro da câmera
-            glm::vec4 camera_lookat_l    = g_PlayerPos; // Ponto "l", para onde a câmera (look-at) estará sempre olhando
+            glm::vec4 camera_lookat_l = g_PlayerPos; // Ponto "l", para onde a câmera (look-at) estará sempre olhando
+            camera_position_c = transform_matrix * reference_point; // Ponto "c", centro da câmera
             camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         } else {
+            // Calculamos as rotações da câmera livre
             float x = cos(g_Pitch) * cos(g_Yaw);
             float y = sin(g_Pitch);
             float z = cos(g_Pitch) * sin(g_Yaw);
