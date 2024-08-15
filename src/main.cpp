@@ -61,6 +61,9 @@
 // Constante que define a distância para o jogador da câmera look-at
 #define LOOKAT_CAMERA_DIST 10.0f
 
+// Constante que define a duração da animação de ataque, em segundos
+#define ANIMATION_DURATION 0.25f
+
 // Constante que aproxima o valor de PI
 #define PI 3.14159265358979323846f
 
@@ -142,6 +145,8 @@ GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
 void LoadShader(const char* filename, GLuint shader_id); // Função utilizada pelas duas acima
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Cria um programa de GPU
 void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t); // Computa os efeitos da gravidade
+glm::vec4 CalculateSwordAnimationPosition(float t); // Calcula a posição da espada no instante normalizado da animação
+glm::vec3 CalculateSwordAnimationRotation(float t); // Calcula a rotação da espada no instante normalizado da animação
 void PrintObjModelInfo(ObjModel*); // Função para debugging
 
 // Funções callback para comunicação com o sistema operacional e interação do
@@ -198,6 +203,9 @@ glm::vec4 g_PlayerPos;
 // Velocidade do jogador
 glm::vec4 g_PlayerSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
 
+// Último timestamp que o jogador desferiu um golpe
+float g_LastAttackTime = -std::numeric_limits<float>::infinity();
+
 // Posição do adversário
 glm::vec3 g_EnemyPos = {   0.0f,  15.0f,   2.0f };
 
@@ -216,11 +224,6 @@ bool g_WKeyPressed = false;
 bool g_AKeyPressed = false;
 bool g_SKeyPressed = false;
 bool g_DKeyPressed = false;
-
-// "g_LeftMouseButtonPressed = true" se o usuário está com o botão esquerdo do mouse
-// pressionado no momento atual. Veja função MouseButtonCallback().
-bool g_LeftMouseButtonPressed = false;
-bool g_RightMouseButtonPressed = false; // Análogo para botão direito do mouse
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint g_GpuProgramID = 0;
@@ -489,10 +492,22 @@ int main(int argc, char* argv[])
                      * Matrix_Rotate_Z(-PI / 2);
 
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, SWORD);
-            DrawVirtualObject("Object_02fade37.jpg");
             glUniform1i(g_object_id_uniform, SHIELD);
             DrawVirtualObject("Object_6977716c.jpg");
+
+            if (current_time - g_LastAttackTime <= ANIMATION_DURATION) {
+                float normalized_time = (current_time - g_LastAttackTime) / ANIMATION_DURATION;
+                glm::vec4 position = CalculateSwordAnimationPosition(normalized_time);
+                glm::vec3 rotation = CalculateSwordAnimationRotation(normalized_time);
+                model *= Matrix_Translate(position.x, position.y, position.z)
+                         * Matrix_Rotate_X(rotation.x)
+                         * Matrix_Rotate_Y(rotation.y)
+                         * Matrix_Rotate_Z(rotation.z);
+            }
+
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, SWORD);
+            DrawVirtualObject("Object_02fade37.jpg");
         }
 
 
@@ -1103,6 +1118,28 @@ void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t) {
     }
 }
 
+// Calcula a posição da espada no instante normalizado da animação
+glm::vec4 CalculateSwordAnimationPosition(float t) {
+    glm::vec4 p1 = {0.0f, 0.0f, 0.0f, 1.0f};
+    glm::vec4 p2 = {-0.2f, 0.0f, 0.0f, 1.0f};
+    glm::vec4 p3 = {-0.2f, -1.0f, -0.2f, 1.0f};
+    glm::vec4 p4 = {0.0f, -1.0f, -0.2f, 1.0f};
+
+    glm::vec4 c = (float) pow((1 - t), 3) * p1
+                + 3 * t * (float) pow((1 - t), 2) * p2
+                + 3 * t * t * (1 - t) * p3
+                + t * t * t * p4;
+
+    return c;
+}
+
+// Calcula a rotação da espada no instante normalizado da animação
+glm::vec3 CalculateSwordAnimationRotation(float t) {
+    float rotation_y = PI / 8 * t;
+    float rotation_z = PI / 4 * t;
+    return glm::vec3(0.0f, rotation_y, rotation_z);
+}
+
 // Definição da função que será chamada sempre que a janela do sistema
 // operacional for redimensionada, por consequência alterando o tamanho do
 // "framebuffer" (região de memória onde são armazenados os pixels da imagem).
@@ -1129,33 +1166,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
-        // Se o usuário pressionou o botão esquerdo do mouse, guardamos a
-        // posição atual do cursor nas variáveis g_LastCursorPosX e
-        // g_LastCursorPosY.  Também, setamos a variável
-        // g_LeftMouseButtonPressed como true, para saber que o usuário está
-        // com o botão esquerdo pressionado.
-        g_LeftMouseButtonPressed = true;
-    }
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-    {
-        // Quando o usuário soltar o botão esquerdo do mouse, atualizamos a
-        // variável abaixo para false.
-        g_LeftMouseButtonPressed = false;
-    }
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-    {
-        // Se o usuário pressionou o botão esquerdo do mouse, guardamos a
-        // posição atual do cursor nas variáveis g_LastCursorPosX e
-        // g_LastCursorPosY.  Também, setamos a variável
-        // g_RightMouseButtonPressed como true, para saber que o usuário está
-        // com o botão esquerdo pressionado.
-        g_RightMouseButtonPressed = true;
-    }
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
-    {
-        // Quando o usuário soltar o botão esquerdo do mouse, atualizamos a
-        // variável abaixo para false.
-        g_RightMouseButtonPressed = false;
+        g_LastAttackTime = (float) glfwGetTime();;
     }
 }
 
