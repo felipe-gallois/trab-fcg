@@ -61,6 +61,9 @@
 // Constante que define a distância para o jogador da câmera look-at
 #define LOOKAT_CAMERA_DIST 10.0f
 
+// Constante que aproxima o valor de PI
+#define PI 3.14159265358979323846f
+
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
 struct ObjModel
@@ -464,20 +467,34 @@ int main(int argc, char* argv[])
         // Atualizamos a posição do jogador, após computada a velocidade
         UpdatePlayerPosition(delta_t);
 
-        // Aplicamos as transformações e desenhamos o jogador
-        model = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
-                * Matrix_Rotate_Y(g_Yaw);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SWORD);
-        DrawVirtualObject("Object_02fade37.jpg");
-
-        if (g_CameraLookAt) {   // Não desenha armadura se câmera for livre
+        if (g_CameraLookAt) {
+            // Aplicamos as transformações e desenhamos o jogador
+            model = Matrix_Translate(g_PlayerPos.x, g_PlayerPos.y, g_PlayerPos.z)
+                    * Matrix_Rotate_Y(g_Yaw);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, SWORD);
+            DrawVirtualObject("Object_02fade37.jpg");
             glUniform1i(g_object_id_uniform, ARMOUR);
             DrawVirtualObject("Object_5049cba8.jpg");
+            glUniform1i(g_object_id_uniform, SHIELD);
+            DrawVirtualObject("Object_6977716c.jpg");
+        } else {
+            // Aplicamos as transformações da câmera
+            model = Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z)
+                    * Matrix_Rotate_Y(g_Yaw)
+                    * Matrix_Rotate_Z(g_Pitch);
+
+            // Aplicamos as transformações dos objetos
+            model *= Matrix_Translate(-0.9f, -0.25f, 0.0f)
+                     * Matrix_Rotate_Z(-PI / 2);
+
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, SWORD);
+            DrawVirtualObject("Object_02fade37.jpg");
+            glUniform1i(g_object_id_uniform, SHIELD);
+            DrawVirtualObject("Object_6977716c.jpg");
         }
 
-        glUniform1i(g_object_id_uniform, SHIELD);
-        DrawVirtualObject("Object_6977716c.jpg");
 
         // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
