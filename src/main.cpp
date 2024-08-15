@@ -1166,7 +1166,10 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
-        g_LastAttackTime = (float) glfwGetTime();;
+        float current_time = (float) glfwGetTime();
+        if (current_time - g_LastAttackTime > ANIMATION_DURATION) {
+            g_LastAttackTime = current_time;
+        }
     }
 }
 
