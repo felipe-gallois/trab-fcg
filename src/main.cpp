@@ -125,6 +125,17 @@ struct ObjModel
     }
 };
 
+//Bouding box para teste de colisão
+struct BoundingBox {
+    glm::vec3 min;
+    glm::vec3 max;
+};
+
+BoundingBox playerBox;
+BoundingBox enemyBox;
+std::vector<BoundingBox> treeBoxes;
+
+
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -139,6 +150,7 @@ void LoadTextureImage(const char* filename); // Função que carrega imagens de 
 void ScalePlaneModelAndTexCoords(ObjModel* model); // Escala as coordenadas da malha e da textura do plano
 void UpdatePlayerMovementSpeed(); // Atualiza a velocidade do jogador
 void UpdatePlayerPosition(float delta_t); // Atualiza a posição do jogador, após computada a velocidade
+void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale); //Faz update do bounding box do inimigo pra teste de colisão
 void DrawVirtualObject(const char* object_name); // Desenha um objeto armazenado em g_VirtualScene
 GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
@@ -224,6 +236,32 @@ bool g_WKeyPressed = false;
 bool g_AKeyPressed = false;
 bool g_SKeyPressed = false;
 bool g_DKeyPressed = false;
+
+glm::vec3 mapMin(-50.0f, 0.0f, -50.0f); // Defina os limites mínimos do mapa
+glm::vec3 mapMax(50.0f, 10.0f, 50.0f);  // Defina os limites máximos do mapa
+
+///TESTE DE COLISÃO
+bool CheckCollision(const BoundingBox &box1, const BoundingBox &box2) {
+    return (box1.min.x <= box2.max.x && box1.max.x >= box2.min.x) &&
+           (box1.min.y <= box2.max.y && box1.max.y >= box2.min.y) &&
+           (box1.min.z <= box2.max.z && box1.max.z >= box2.min.z);
+}
+
+// Função para verificar colisão com inimigo
+bool CheckPlayerEnemyCollision() {
+    return CheckCollision(playerBox, enemyBox);
+}
+
+bool CheckPlayerTreeCollision() {
+    for (const auto& treeBox : treeBoxes) {
+        if (CheckCollision(playerBox, treeBox)) {
+            return true; // Colidiu com pelo menos uma árvore
+        }
+    }
+    return false;
+}
+
+
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint g_GpuProgramID = 0;
@@ -348,10 +386,21 @@ int main(int argc, char* argv[])
 
     // Configura posição inicial do jogador
     float playerSize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
+    float enemySize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
     g_PlayerPos = { -2.0f, 0.0f + playerSize/2, 0.0f, 1.0f };
+
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
     float tree_y = g_PlaneY - g_TreeScaleY * g_VirtualScene["Object_farm_trees_rocks_flowers_D.jpg"].bbox_min.y;
+
+    for (const auto& treePos : tree_pos) {
+    BoundingBox treeBox;
+    glm::vec3 treeSize = glm::vec3(g_TreeScaleX, g_TreeScaleY, g_TreeScaleZ);
+    UpdateBoundingBox(treeBox, glm::vec3(treePos.x, tree_y, treePos.y), treeSize);
+    treeBoxes.push_back(treeBox);
+    }
+
+
 
     // Habilitamos o Z-buffer. Veja slides 104-116 do documento Aula_09_Projecoes.pdf.
     glEnable(GL_DEPTH_TEST);
@@ -467,8 +516,27 @@ int main(int argc, char* argv[])
         // Atualizamos a velocidade do jogador
         UpdatePlayerMovementSpeed();
 
+        glm::vec4 previousPlayerPos = g_PlayerPos; // Salva a posição anterior do jogador
         // Atualizamos a posição do jogador, após computada a velocidade
         UpdatePlayerPosition(delta_t);
+
+        // Atualize as caixas delimitadoras
+        glm::vec3 playerScale = glm::vec3(1.0f, playerSize, 1.0f); // Tamanho aproximado do jogador
+        glm::vec3 enemyScale = glm::vec3(1.0f, enemySize, 1.0f); // Tamanho aproximado do inimigo
+        UpdateBoundingBox(playerBox, g_PlayerPos, playerScale);
+        UpdateBoundingBox(enemyBox, g_EnemyPos, enemyScale);
+
+        // Verifique colisão com o inimigo
+        if (CheckPlayerEnemyCollision()) {
+            // Reverte a posição do jogador se houver colisão com o inimigo
+            g_PlayerPos = previousPlayerPos;
+        }
+
+        // Verifique colisão com as árvores
+        if (CheckPlayerTreeCollision()) {
+            // Reverte a posição do jogador se houver colisão com uma árvore
+            g_PlayerPos = previousPlayerPos;
+        }
 
         if (g_CameraLookAt) {
             // Aplicamos as transformações e desenhamos o jogador
@@ -647,7 +715,21 @@ void UpdatePlayerMovementSpeed() {
 // Atualiza a posição do jogador, após computada a velocidade
 void UpdatePlayerPosition(float delta_t) {
     g_PlayerPos += g_PlayerSpeed * delta_t;
+
+    // Limita a posição do jogador dentro dos limites do mapa
+    if (g_PlayerPos.x < mapMin.x) g_PlayerPos.x = mapMin.x;
+    if (g_PlayerPos.x > mapMax.x) g_PlayerPos.x = mapMax.x;
+    if (g_PlayerPos.y < mapMin.y) g_PlayerPos.y = mapMin.y;
+    if (g_PlayerPos.y > mapMax.y) g_PlayerPos.y = mapMax.y;
+    if (g_PlayerPos.z < mapMin.z) g_PlayerPos.z = mapMin.z;
+    if (g_PlayerPos.z > mapMax.z) g_PlayerPos.z = mapMax.z;
 }
+
+void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale) {
+            box.min = position - scale * 0.5f;
+            box.max = position + scale * 0.5f;
+        }
+
 
 // Função que desenha um objeto armazenado em g_VirtualScene. Veja definição
 // dos objetos na função BuildTrianglesAndAddToVirtualScene().
