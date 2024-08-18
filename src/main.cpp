@@ -65,6 +65,9 @@
 // Constante que define a duração da animação de ataque, em segundos
 #define ANIMATION_DURATION 0.25f
 
+// Constante que define o raio mínimo que o jogador precisa estar do centro do mapa para o inimigo nascer
+#define SPAWN_MIN_RADIUS 25.0f
+
 // Constante que aproxima o valor de PI
 #define PI 3.14159265358979323846f
 
@@ -208,7 +211,7 @@ glm::vec4 g_PlayerSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
 float g_LastAttackTime = -std::numeric_limits<float>::infinity();
 
 // Posição do adversário
-glm::vec3 g_EnemyPos = {   0.0f,  15.0f,   2.0f };
+glm::vec3 g_EnemyPos = {   0.0f,  100.0f,   0.0f };
 
 // Velocidade do adversário
 glm::vec3 g_EnemySpeed = {   0.0f,   0.0f,   0.0f };
@@ -225,6 +228,9 @@ bool g_WKeyPressed = false;
 bool g_AKeyPressed = false;
 bool g_SKeyPressed = false;
 bool g_DKeyPressed = false;
+
+// Se o adversário já tiver nascido
+bool g_EnemySpawned = false;
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint g_GpuProgramID = 0;
@@ -345,7 +351,7 @@ int main(int argc, char* argv[])
 
     // Configura posição inicial do jogador
     float playerSize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
-    g_PlayerPos = { -2.0f, 0.0f + playerSize/2, 0.0f, 1.0f };
+    g_PlayerPos = { 0.0f, 0.0f + playerSize/2, 0.0f, 1.0f };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
     float tree_y = g_PlaneY - g_TreeScaleY * g_VirtualScene["Object_farm_trees_rocks_flowers_D.jpg"].bbox_min.y;
@@ -448,24 +454,34 @@ int main(int argc, char* argv[])
         delta_t = current_time - prev_time;
         prev_time = current_time;
 
-        // Computamos o efeito da gravidade com colisões no adversário
-        ComputeGravity(g_EnemyPos, g_EnemySpeed, delta_t);
+        if (g_EnemySpawned) {
+            // Computamos o efeito da gravidade com colisões no adversário
+            ComputeGravity(g_EnemyPos, g_EnemySpeed, delta_t);
 
-        // Aplicamos as transformações e desenhamos o adversário
-        model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SWORD);
-        DrawVirtualObject("Object_02fade37.jpg");
-        glUniform1i(g_object_id_uniform, ARMOUR);
-        DrawVirtualObject("Object_5049cba8.jpg");
-        glUniform1i(g_object_id_uniform, SHIELD);
-        DrawVirtualObject("Object_6977716c.jpg");
+            // Aplicamos as transformações e desenhamos o adversário
+            model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, SWORD);
+            DrawVirtualObject("Object_02fade37.jpg");
+            glUniform1i(g_object_id_uniform, ARMOUR);
+            DrawVirtualObject("Object_5049cba8.jpg");
+            glUniform1i(g_object_id_uniform, SHIELD);
+            DrawVirtualObject("Object_6977716c.jpg");
+        }
 
         // Atualizamos a velocidade do jogador
         UpdatePlayerMovementSpeed();
 
         // Atualizamos a posição do jogador, após computada a velocidade
         UpdatePlayerPosition(delta_t);
+
+        // Calculamos a distância do jogador para o centro do mapa
+        float player_radial_dist = sqrt(g_PlayerPos.x * g_PlayerPos.x + g_PlayerPos.z * g_PlayerPos.z);
+
+        // Testamos se a distância do jogador para o centro foi suficiente para fazer nascer o adversário
+        if (player_radial_dist > SPAWN_MIN_RADIUS) {
+            g_EnemySpawned = true;
+        }
 
         if (g_CameraLookAt) {
             // Aplicamos as transformações e desenhamos o jogador
