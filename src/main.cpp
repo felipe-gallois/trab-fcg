@@ -48,6 +48,7 @@
 #include "utils.h"
 #include "matrices.h"
 #include "collisions.hpp"
+#include "ambient.hpp"
 
 // Constante que define a velocidade de movimentação
 #define MOV_SPEED 8.0f
@@ -337,14 +338,10 @@ int main(int argc, char* argv[])
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
     // Contruímos a estrutura que armazena as posições das árvores no plano
-    std::vector<glm::vec2> tree_pos = {
-        //   X       Z
-        {   3.0f,   4.0f },
-        {  12.0f,   4.0f },
-        {   40.0f,  12.0f },
-        {   3.0f,  50.0f },
-        {   30.0f,  12.0f },
-    };
+    srand(42); // Utiliza seed para geração procedural de árvores
+    float plane_size = g_VirtualScene["object_0"].bbox_max.x - g_VirtualScene["object_0"].bbox_min.x;
+    auto tree_pos = CalculatePoisson(plane_size, 5.5f, 50);
+    RemoveFromCentralRadius(tree_pos, 5.0f);
 
     // Configura posição inicial do jogador
     float playerSize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
@@ -513,8 +510,8 @@ int main(int argc, char* argv[])
 
         // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
-        for (const auto pos : tree_pos) {
-            model = Matrix_Translate(pos.x, tree_y, pos.y)
+        for (const auto &pos : tree_pos) {
+            model = Matrix_Translate(pos.first, tree_y, pos.second)
                     * Matrix_Scale(g_TreeScaleX, g_TreeScaleY, g_TreeScaleZ);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, TREE);
