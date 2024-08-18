@@ -148,7 +148,7 @@ GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
 void LoadShader(const char* filename, GLuint shader_id); // Função utilizada pelas duas acima
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Cria um programa de GPU
-void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t); // Computa os efeitos da gravidade
+void ComputeGravity(glm::vec4& pos, glm::vec4& vel, float delta_t); // Computa os efeitos da gravidade
 glm::vec4 CalculateSwordAnimationPosition(float t); // Calcula a posição da espada no instante normalizado da animação
 glm::vec3 CalculateSwordAnimationRotation(float t); // Calcula a rotação da espada no instante normalizado da animação
 void PrintObjModelInfo(ObjModel*); // Função para debugging
@@ -211,10 +211,10 @@ glm::vec4 g_PlayerSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
 float g_LastAttackTime = -std::numeric_limits<float>::infinity();
 
 // Posição do adversário
-glm::vec3 g_EnemyPos = {   0.0f,  100.0f,   0.0f };
+glm::vec4 g_EnemyPos = {   0.0f,  100.0f,   0.0f,   1.0f };
 
 // Velocidade do adversário
-glm::vec3 g_EnemySpeed = {   0.0f,   0.0f,   0.0f };
+glm::vec4 g_EnemySpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
 
 // Se a câmera atual é look-at
 bool g_CameraLookAt = false;
@@ -458,8 +458,18 @@ int main(int argc, char* argv[])
             // Computamos o efeito da gravidade com colisões no adversário
             ComputeGravity(g_EnemyPos, g_EnemySpeed, delta_t);
 
+            // Calculamos o vetor da linha de visão do adversário
+            glm::vec4 view = g_PlayerPos - g_EnemyPos;
+            view.y = 0.0f;
+
+            // Calculamos a rotação do adversário
+            view = glm::normalize(view);
+            float dot_product = glm::dot(view, { -1.0f, 0.0f, 0.0f, 0.0f });
+            float rotation = (view.z >= 0) ? acos(dot_product) : - acos(dot_product);
+
             // Aplicamos as transformações e desenhamos o adversário
-            model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z);
+            model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z)
+                    * Matrix_Rotate_Y(rotation);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, SWORD);
             DrawVirtualObject("Object_02fade37.jpg");
@@ -1107,7 +1117,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
 }
 
 // Função que aplica os efeitos da gravidade e testes de colisão sobre o cavaleiro
-void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t) {
+void ComputeGravity(glm::vec4& pos, glm::vec4& vel, float delta_t) {
     // Calculamos a potencial velocidade do cavaleiro no fim do intervalo de tempo
     float end_vel = vel.y - delta_t * GRAVITY;
 
