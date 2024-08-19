@@ -150,7 +150,6 @@ void LoadTextureImage(const char* filename); // Função que carrega imagens de 
 void ScalePlaneModelAndTexCoords(ObjModel* model); // Escala as coordenadas da malha e da textura do plano
 void UpdatePlayerMovementSpeed(); // Atualiza a velocidade do jogador
 void UpdatePlayerPosition(float delta_t); // Atualiza a posição do jogador, após computada a velocidade
-void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale); //Faz update do bounding box do inimigo pra teste de colisão
 void DrawVirtualObject(const char* object_name); // Desenha um objeto armazenado em g_VirtualScene
 GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
@@ -160,7 +159,6 @@ void ComputeGravity(glm::vec3& pos, glm::vec3& vel, float delta_t); // Computa o
 glm::vec4 CalculateSwordAnimationPosition(float t); // Calcula a posição da espada no instante normalizado da animação
 glm::vec3 CalculateSwordAnimationRotation(float t); // Calcula a rotação da espada no instante normalizado da animação
 void PrintObjModelInfo(ObjModel*); // Função para debugging
-
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -239,28 +237,6 @@ bool g_DKeyPressed = false;
 
 glm::vec3 mapMin(-50.0f, 0.0f, -50.0f); // Defina os limites mínimos do mapa
 glm::vec3 mapMax(50.0f, 10.0f, 50.0f);  // Defina os limites máximos do mapa
-
-///TESTE DE COLISÃO
-bool CheckCollision(const BoundingBox &box1, const BoundingBox &box2) {
-    return (box1.min.x <= box2.max.x && box1.max.x >= box2.min.x) &&
-           (box1.min.y <= box2.max.y && box1.max.y >= box2.min.y) &&
-           (box1.min.z <= box2.max.z && box1.max.z >= box2.min.z);
-}
-
-// Função para verificar colisão com inimigo
-bool CheckPlayerEnemyCollision() {
-    return CheckCollision(playerBox, enemyBox);
-}
-
-bool CheckPlayerTreeCollision() {
-    for (const auto& treeBox : treeBoxes) {
-        if (CheckCollision(playerBox, treeBox)) {
-            return true; // Colidiu com pelo menos uma árvore
-        }
-    }
-    return false;
-}
-
 
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
@@ -578,6 +554,9 @@ int main(int argc, char* argv[])
             DrawVirtualObject("Object_02fade37.jpg");
         }
 
+        // **Verifica a colisão da espada com o inimigo ou objetos**
+        CheckSwordCollision();
+
 
         // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
@@ -617,6 +596,7 @@ int main(int argc, char* argv[])
     // Fim do programa
     return 0;
 }
+
 
 // Função que carrega uma imagem para ser utilizada como textura
 void LoadTextureImage(const char* filename)
@@ -724,12 +704,6 @@ void UpdatePlayerPosition(float delta_t) {
     if (g_PlayerPos.z < mapMin.z) g_PlayerPos.z = mapMin.z;
     if (g_PlayerPos.z > mapMax.z) g_PlayerPos.z = mapMax.z;
 }
-
-void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale) {
-            box.min = position - scale * 0.5f;
-            box.max = position + scale * 0.5f;
-        }
-
 
 // Função que desenha um objeto armazenado em g_VirtualScene. Veja definição
 // dos objetos na função BuildTrianglesAndAddToVirtualScene().
