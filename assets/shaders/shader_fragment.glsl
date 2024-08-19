@@ -40,6 +40,9 @@ uniform sampler2D TextureImage2;
 uniform sampler2D TextureImage3;
 uniform sampler2D TextureImage4;
 
+// Variável que controla o efeito de dano
+uniform bool flash_red;
+
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
 
@@ -84,13 +87,16 @@ void main()
     vec3 Ks;
     float q;
 
+    // Calcula o fator da intensidade do efeito de dano
+    float flash_factor = flash_red ? 0.25f : 0.0f;
+
     if (object_id == SWORD) {
         Kd = texture(TextureImage0, vec2(U,V)).rgb;
         Ka = Kd * 0.5f;
         Ks = vec3(0.1f, 0.1f, 0.1f);
         q = 40.0f;
     } else if (object_id == ARMOUR) {
-        Kd = texture(TextureImage1, vec2(U,V)).rgb;
+        Kd = mix(texture(TextureImage1, vec2(U,V)).rgb, vec3(1.0f, 0.0f, 0.0f), flash_factor);
         Ka = Kd * 0.5f;
         Ks = vec3(0.1f, 0.1f, 0.1f);
         q = 40.0f;

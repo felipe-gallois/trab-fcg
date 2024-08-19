@@ -71,6 +71,9 @@
 // Constante que define a distancia de detecção do ataque do jogador
 #define ATTACK_DISTANCE 10.0f
 
+// Constante que define o tempo que o jogador deve exibir o efeito de dano
+#define FLASH_DURATION 0.2f
+
 // Constante que aproxima o valor de PI
 #define PI 3.14159265358979323846f
 
@@ -222,6 +225,9 @@ glm::vec4 g_EnemyPos = {   0.0f,  100.0f,   0.0f,   1.0f };
 // Velocidade do adversário
 glm::vec4 g_EnemySpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
 
+// Último timestamp que o adversário tomou dano
+float g_LastHitTime = -std::numeric_limits<float>::infinity();
+
 // Se a câmera atual é look-at
 bool g_CameraLookAt = false;
 
@@ -246,6 +252,7 @@ GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
+GLint g_flash_red_uniform;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
@@ -480,12 +487,13 @@ int main(int argc, char* argv[])
             glm::vec4 ray_direction = glm::normalize(camera_view_vector) * ATTACK_DISTANCE;
 
             if (g_PlayerAttacked && RayIntersectsAABB(camera_position_c, ray_direction, aabb_min, aabb_max)) {
-                printf("Tomei dano\n");
-            } else if (g_PlayerAttacked) {
-                printf("Center = (%f, %f, %f)\n", camera_position_c.x, camera_position_c.y, camera_position_c.z);
-                printf("Vector = (%f, %f, %f)\n", ray_direction.x, ray_direction.y, ray_direction.z);
-                printf("Min = (%f, %f, %f)\n", aabb_min.x, aabb_min.y, aabb_min.z);
-                printf("Max = (%f, %f, %f)\n", aabb_max.x, aabb_max.y, aabb_max.z);
+                g_LastHitTime = current_time;
+            }
+
+            if (current_time - g_LastHitTime <= FLASH_DURATION) {
+                glUniform1i(g_flash_red_uniform, 1);            
+            } else {
+                glUniform1i(g_flash_red_uniform, 0);            
             }
 
             // Aplicamos as transformações e desenhamos
@@ -522,6 +530,7 @@ int main(int argc, char* argv[])
             glUniform1i(g_object_id_uniform, SWORD);
             DrawVirtualObject("Object_02fade37.jpg");
             glUniform1i(g_object_id_uniform, ARMOUR);
+            glUniform1i(g_flash_red_uniform, 0);            
             DrawVirtualObject("Object_5049cba8.jpg");
             glUniform1i(g_object_id_uniform, SHIELD);
             DrawVirtualObject("Object_6977716c.jpg");
@@ -756,6 +765,7 @@ void LoadShadersFromFiles()
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);
+    g_flash_red_uniform = glGetUniformLocation(g_GpuProgramID, "flash_red");
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
