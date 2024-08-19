@@ -71,6 +71,9 @@
 // Constante que define a distancia de detecção do ataque do jogador
 #define ATTACK_DISTANCE 10.0f
 
+// Constante que define o dano que o adversário toma por ataque
+#define ATTACK_DAMAGE 10
+
 // Constante que define o tempo que o jogador deve exibir o efeito de dano
 #define FLASH_DURATION 0.2f
 
@@ -224,6 +227,9 @@ glm::vec4 g_EnemyPos = {   0.0f,  100.0f,   0.0f,   1.0f };
 
 // Velocidade do adversário
 glm::vec4 g_EnemySpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
+
+// Vida restante do adversário
+int g_EnemyLifePoints = 100;
 
 // Último timestamp que o adversário tomou dano
 float g_LastHitTime = -std::numeric_limits<float>::infinity();
@@ -488,6 +494,7 @@ int main(int argc, char* argv[])
 
             if (g_PlayerAttacked && RayIntersectsAABB(camera_position_c, ray_direction, aabb_min, aabb_max)) {
                 g_LastHitTime = current_time;
+                g_EnemyLifePoints -= ATTACK_DAMAGE;
             }
 
             if (current_time - g_LastHitTime <= FLASH_DURATION) {
@@ -597,6 +604,11 @@ int main(int argc, char* argv[])
         // definidas anteriormente usando glfwSet*Callback() serão chamadas
         // pela biblioteca GLFW.
         glfwPollEvents();
+
+        // Testa condição para o jogo encerrar
+        if (g_EnemyLifePoints <= 0) {
+            break;
+        }
     }
 
     // Finalizamos o uso dos recursos do sistema operacional
