@@ -9,6 +9,23 @@
 //
 
 #include "collisions.hpp"
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+// Headers das bibliotecas OpenGL
+#include <glad/glad.h>   // Criação de contexto OpenGL 3.3
+#include <GLFW/glfw3.h>  // Criação de janelas do sistema operacional
+
+// Headers da biblioteca GLM: criação de matrizes e vetores.
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+// Definição das caixas delimitadoras
+BoundingBox playerBox;
+BoundingBox enemyBox;
+std::vector<BoundingBox> treeBoxes;
 
 float CalculateAABBToPlaneCollisionTime(float plane_height, float bbox_min_height, float vel) {
     return (plane_height - bbox_min_height) / vel;
@@ -72,16 +89,3 @@ void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale) {
             box.max = position + scale * 0.5f;
         }
         
-
-void CheckSwordCollision() {
-    glm::vec4 ray_origin = camera_position_c; // Posição da câmera
-    glm::vec4 ray_direction = glm::normalize(camera_view_vector); // Direção do vetor de visão
-
-    for (const BoundingBox& box : enemyBoxes) {
-        float tmin;
-        if (RayIntersectsAABB(ray_origin, ray_direction, box, tmin)) {
-            // Colisão detectada, você pode tratar a lógica da espada aqui
-            std::cout << "Colisão detectada!" << std::endl;
-        }
-    }
-}

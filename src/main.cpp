@@ -18,7 +18,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-
+#include <iostream>
 // Headers abaixo são específicos de C++
 #include <map>
 #include <stack>
@@ -125,16 +125,6 @@ struct ObjModel
     }
 };
 
-//Bouding box para teste de colisão
-struct BoundingBox {
-    glm::vec3 min;
-    glm::vec3 max;
-};
-
-BoundingBox playerBox;
-BoundingBox enemyBox;
-std::vector<BoundingBox> treeBoxes;
-
 
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
@@ -166,6 +156,11 @@ void ErrorCallback(int error, const char* description);
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
+
+//Migrar para collisions depois
+void CheckSwordCollision();
+
+
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -557,6 +552,17 @@ int main(int argc, char* argv[])
         // **Verifica a colisão da espada com o inimigo ou objetos**
         CheckSwordCollision();
 
+        glm::vec4 ray_origin = camera_position_c; // Posição da câmera
+        glm::vec4 ray_direction = glm::normalize(camera_view_vector); // Direção do vetor de visão
+
+        float tmin;
+        if (RayIntersectsAABB(ray_origin, ray_direction, enemyBox, tmin)) {
+            // Colisão detectada, você pode tratar a lógica da espada aqui
+            std::cout << "Colisão detectada!" << std::endl;
+        }
+
+
+
 
         // Desenhamos os modelos das árvores
         glDisable(GL_CULL_FACE);
@@ -596,6 +602,11 @@ int main(int argc, char* argv[])
     // Fim do programa
     return 0;
 }
+
+void CheckSwordCollision() {
+}
+
+
 
 
 // Função que carrega uma imagem para ser utilizada como textura
