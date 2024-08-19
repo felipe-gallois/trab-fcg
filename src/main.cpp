@@ -72,7 +72,7 @@
 #define ATTACK_DISTANCE 10.0f
 
 // Constante que define o dano que o adversário toma por ataque
-#define ATTACK_DAMAGE 10
+#define ATTACK_DAMAGE 15
 
 // Constante que define o tempo que o jogador deve exibir o efeito de dano
 #define FLASH_DURATION 0.2f
@@ -224,6 +224,9 @@ float g_LastAttackTime = -std::numeric_limits<float>::infinity();
 
 // Posição do adversário
 glm::vec4 g_EnemyPos = {   0.0f,  100.0f,   0.0f,   1.0f };
+
+// Rotação do adversário
+glm::vec3 g_EnemyRot = {   0.0f,  0.0f,   0.0f };
 
 // Velocidade do adversário
 glm::vec4 g_EnemySpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
@@ -473,7 +476,21 @@ int main(int argc, char* argv[])
         delta_t = current_time - prev_time;
         prev_time = current_time;
 
-        if (g_EnemySpawned) {
+        if (g_EnemyLifePoints <= 0) {
+            // Aplicamos as transformações base
+            model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z)
+                    * Matrix_Rotate_Y(g_EnemyRot.y);
+
+            // Aplicamos transformações para o adversário cair
+            model *= Matrix_Translate(0.0f, -0.6f, 0.0f)
+                     * Matrix_Rotate_Z(-PI / 2);
+
+            // Desenhamos o adversário
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_flash_red_uniform, 0);            
+            glUniform1i(g_object_id_uniform, ARMOUR);
+            DrawVirtualObject("Object_5049cba8.jpg");
+        } else if (g_EnemySpawned) {
             // Computamos o efeito da gravidade com colisões no adversário
             ComputeGravity(g_EnemyPos, g_EnemySpeed, delta_t);
 
@@ -484,7 +501,7 @@ int main(int argc, char* argv[])
             // Calculamos a rotação do adversário
             view = glm::normalize(view);
             float dot_product = glm::dot(view, { -1.0f, 0.0f, 0.0f, 0.0f });
-            float rotation = (view.z >= 0) ? acos(dot_product) : - acos(dot_product);
+            g_EnemyRot.y = (view.z >= 0) ? acos(dot_product) : - acos(dot_product);
 
             // Calculamos a aabb do adversário
             glm::vec4 aabb_min = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z) * glm::vec4(g_VirtualScene["Object_5049cba8.jpg"].bbox_min, 1.0f);
@@ -505,7 +522,7 @@ int main(int argc, char* argv[])
 
             // Aplicamos as transformações e desenhamos
             model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z)
-                    * Matrix_Rotate_Y(rotation);
+                    * Matrix_Rotate_Y(g_EnemyRot.y);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(g_object_id_uniform, SWORD);
             DrawVirtualObject("Object_02fade37.jpg");
@@ -604,11 +621,6 @@ int main(int argc, char* argv[])
         // definidas anteriormente usando glfwSet*Callback() serão chamadas
         // pela biblioteca GLFW.
         glfwPollEvents();
-
-        // Testa condição para o jogo encerrar
-        if (g_EnemyLifePoints <= 0) {
-            break;
-        }
     }
 
     // Finalizamos o uso dos recursos do sistema operacional
