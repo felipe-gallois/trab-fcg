@@ -68,6 +68,9 @@
 // Constante que define o raio mínimo que o jogador precisa estar do centro do mapa para o inimigo nascer
 #define SPAWN_MIN_RADIUS 25.0f
 
+// Constante que define a distancia de detecção do ataque do jogador
+#define ATTACK_DISTANCE 10.0f
+
 // Constante que aproxima o valor de PI
 #define PI 3.14159265358979323846f
 
@@ -206,6 +209,9 @@ glm::vec4 g_PlayerPos;
 
 // Velocidade do jogador
 glm::vec4 g_PlayerSpeed = {   0.0f,   0.0f,   0.0f,   0.0f };
+
+// Se o jogador atacou
+bool g_PlayerAttacked = false;
 
 // Último timestamp que o jogador desferiu um golpe
 float g_LastAttackTime = -std::numeric_limits<float>::infinity();
@@ -467,7 +473,22 @@ int main(int argc, char* argv[])
             float dot_product = glm::dot(view, { -1.0f, 0.0f, 0.0f, 0.0f });
             float rotation = (view.z >= 0) ? acos(dot_product) : - acos(dot_product);
 
-            // Aplicamos as transformações e desenhamos o adversário
+            // Calculamos a aabb do adversário
+            glm::vec4 aabb_min = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z) * glm::vec4(g_VirtualScene["Object_5049cba8.jpg"].bbox_min, 1.0f);
+            glm::vec4 aabb_max = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z) * glm::vec4(g_VirtualScene["Object_5049cba8.jpg"].bbox_max, 1.0f);
+
+            glm::vec4 ray_direction = glm::normalize(camera_view_vector) * ATTACK_DISTANCE;
+
+            if (g_PlayerAttacked && RayIntersectsAABB(camera_position_c, ray_direction, aabb_min, aabb_max)) {
+                printf("Tomei dano\n");
+            } else if (g_PlayerAttacked) {
+                printf("Center = (%f, %f, %f)\n", camera_position_c.x, camera_position_c.y, camera_position_c.z);
+                printf("Vector = (%f, %f, %f)\n", ray_direction.x, ray_direction.y, ray_direction.z);
+                printf("Min = (%f, %f, %f)\n", aabb_min.x, aabb_min.y, aabb_min.z);
+                printf("Max = (%f, %f, %f)\n", aabb_max.x, aabb_max.y, aabb_max.z);
+            }
+
+            // Aplicamos as transformações e desenhamos
             model = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z)
                     * Matrix_Rotate_Y(rotation);
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -550,6 +571,9 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("object_0");
+
+        // Reseta a detecção do ataque do jogador
+        g_PlayerAttacked = false;
 
         // O framebuffer onde OpenGL executa as operações de renderização não
         // é o mesmo que está sendo mostrado para o usuário, caso contrário
@@ -1191,6 +1215,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
         float current_time = (float) glfwGetTime();
         if (current_time - g_LastAttackTime > ANIMATION_DURATION) {
+            g_PlayerAttacked = true;
             g_LastAttackTime = current_time;
         }
     }
