@@ -43,11 +43,18 @@ float CalculateAABBToPlaneCollisionTime(float plane_height, float bbox_min_heigh
 // Função que calcula se um raio intersecta um AABB
 bool RayIntersectsAABB(glm::vec4 &ray_origin, glm::vec4 &ray_direction, glm::vec4 &aabb_min, glm::vec4 &aabb_max);
 
-void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale); //Faz update do bounding box do inimigo pra teste de colisão
-bool CheckCollision(const BoundingBox &box1, const BoundingBox &box2);  //checa uma colisão entre 2 bounding boxes
-bool CheckPlayerEnemyCollision();
-bool CheckPlayerTreeCollision() ;
-void CheckPlayerBounds(glm::vec4& playerPos, float mapScale);
-void CreateTreeBoundingBoxes(const std::list<std::pair<float, float>>& treePositions, const glm::vec3& treeDimensions);
+// Checa uma colisão entre 2 bounding boxes
+bool CheckCollision(const BoundingBox &box1, const BoundingBox &box2);
 
+// Verifica se o jogador está entre os limites do mapa
+void CheckPlayerBounds(glm::vec4& playerPos, float mapScale);
+
+// Faz update do bounding box do inimigo pra teste de colisão
+void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale);
+
+// Função para verificar colisão com inimigo
+bool CheckPlayerEnemyCollision();
+
+void CreateTreeBoundingBoxes(const std::list<std::pair<float, float>>& treePositions, const glm::vec3& treeDimensions);
+bool CheckPlayerTreeCollision() ;
 

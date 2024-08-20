@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <algorithm>
+
 // Headers das bibliotecas OpenGL
 #include <glad/glad.h>   // Criação de contexto OpenGL 3.3
 #include <GLFW/glfw3.h>  // Criação de janelas do sistema operacional
@@ -24,17 +25,17 @@
 #include <glm/vec4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-
 // Definição das caixas delimitadoras
 BoundingBox playerBox;
 BoundingBox enemyBox;
 std::vector<BoundingBox> treeBoxes;
 
-
+// AABB para plano
 float CalculateAABBToPlaneCollisionTime(float plane_height, float bbox_min_height, float vel) {
     return (plane_height - bbox_min_height) / vel;
 }
 
+// Raio para AABB
 bool RayIntersectsAABB(glm::vec4 &ray_origin, glm::vec4 &ray_direction, glm::vec4 &aabb_min, glm::vec4 &aabb_max) {
     float t_min = 0.0f;
     float t_max = std::numeric_limits<float>::max();
@@ -59,14 +60,25 @@ bool RayIntersectsAABB(glm::vec4 &ray_origin, glm::vec4 &ray_direction, glm::vec
 }
 
 
-///TESTE DE COLISÃO
+// AABB para AABB
 bool CheckCollision(const BoundingBox &box1, const BoundingBox &box2) {
     return (box1.min.x <= box2.max.x && box1.max.x >= box2.min.x) &&
            (box1.min.y <= box2.max.y && box1.max.y >= box2.min.y) &&
            (box1.min.z <= box2.max.z && box1.max.z >= box2.min.z);
 }
 
-// Função para verificar colisão com inimigo
+// Ponto para AABB
+void CheckPlayerBounds(glm::vec4& playerPos, float mapScale)
+{
+    float mapMin = -mapScale / 2;
+    float mapMax = mapScale / 2;
+
+    if (playerPos.x < mapMin) playerPos.x = mapMin;
+    if (playerPos.x > mapMax) playerPos.x = mapMax;
+    if (playerPos.z < mapMin) playerPos.z = mapMin;
+    if (playerPos.z > mapMax) playerPos.z = mapMax;
+}
+
 bool CheckPlayerEnemyCollision() {
     return CheckCollision(playerBox, enemyBox);
 }
@@ -100,13 +112,3 @@ void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale) {
             box.max = position + scale * 0.5f;
         }
         
-void CheckPlayerBounds(glm::vec4& playerPos, float mapScale)
-{
-    float mapMin = -mapScale / 2;
-    float mapMax = mapScale / 2;
-
-    if (playerPos.x < mapMin) playerPos.x = mapMin;
-    if (playerPos.x > mapMax) playerPos.x = mapMax;
-    if (playerPos.z < mapMin) playerPos.z = mapMin;
-    if (playerPos.z > mapMax) playerPos.z = mapMax;
-}
