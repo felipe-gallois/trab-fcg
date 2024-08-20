@@ -36,9 +36,9 @@ float CalculateAABBToPlaneCollisionTime(float plane_height, float bbox_min_heigh
 }
 
 // Raio para AABB
-bool RayIntersectsAABB(glm::vec4 &ray_origin, glm::vec4 &ray_direction, glm::vec4 &aabb_min, glm::vec4 &aabb_max) {
+bool RayIntersectsAABB(glm::vec4 &ray_origin, glm::vec4 &ray_direction, glm::vec4 &aabb_min, glm::vec4 &aabb_max, float max_distance) {
     float t_min = 0.0f;
-    float t_max = std::numeric_limits<float>::max();
+    float t_max = max_distance;
 
     // Iterate over the three axes (x, y, z)
     for (int i = 0; i < 3; i++) {

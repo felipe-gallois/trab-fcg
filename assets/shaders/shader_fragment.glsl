@@ -88,7 +88,7 @@ void main()
     float q;
 
     // Calcula o fator da intensidade do efeito de dano
-    float flash_factor = flash_red ? 0.25f : 0.0f;
+    float flash_factor = flash_red ? 0.1f : 0.0f;
 
     if (object_id == SWORD) {
         Kd = texture(TextureImage0, vec2(U,V)).rgb;

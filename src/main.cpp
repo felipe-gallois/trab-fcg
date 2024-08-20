@@ -69,7 +69,7 @@
 #define SPAWN_MIN_RADIUS 25.0f
 
 // Constante que define a distancia de detecção do ataque do jogador
-#define ATTACK_DISTANCE 10.0f
+#define ATTACK_DISTANCE 4.0f
 
 // Constante que define o dano que o adversário toma por ataque
 #define ATTACK_DAMAGE 15
@@ -511,9 +511,9 @@ int main(int argc, char* argv[])
             glm::vec4 aabb_min = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z) * glm::vec4(g_VirtualScene["Object_5049cba8.jpg"].bbox_min, 1.0f);
             glm::vec4 aabb_max = Matrix_Translate(g_EnemyPos.x, g_EnemyPos.y, g_EnemyPos.z) * glm::vec4(g_VirtualScene["Object_5049cba8.jpg"].bbox_max, 1.0f);
 
-            glm::vec4 ray_direction = glm::normalize(camera_view_vector) * ATTACK_DISTANCE;
+            glm::vec4 ray_direction = glm::normalize(camera_view_vector);
 
-            if (g_PlayerAttacked && RayIntersectsAABB(camera_position_c, ray_direction, aabb_min, aabb_max)) {
+            if (g_PlayerAttacked && RayIntersectsAABB(camera_position_c, ray_direction, aabb_min, aabb_max, ATTACK_DISTANCE)) {
                 g_LastHitTime = current_time;
                 g_EnemyLifePoints -= ATTACK_DAMAGE;
             }

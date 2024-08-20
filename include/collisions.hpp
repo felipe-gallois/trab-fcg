@@ -41,7 +41,7 @@ extern std::vector<BoundingBox> treeBoxes;
 float CalculateAABBToPlaneCollisionTime(float plane_height, float bbox_min_height, float vel);
 
 // Função que calcula se um raio intersecta um AABB
-bool RayIntersectsAABB(glm::vec4 &ray_origin, glm::vec4 &ray_direction, glm::vec4 &aabb_min, glm::vec4 &aabb_max);
+bool RayIntersectsAABB(glm::vec4 &ray_origin, glm::vec4 &ray_direction, glm::vec4 &aabb_min, glm::vec4 &aabb_max, float max_distance);
 
 // Checa uma colisão entre 2 bounding boxes
 bool CheckCollision(const BoundingBox &box1, const BoundingBox &box2);
