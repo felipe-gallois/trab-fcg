@@ -210,6 +210,8 @@ float g_PlaneZ = 0.0f;
 // Escala do plano
 float g_PlaneScale = 5.0f;
 
+glm::vec3 mapMin(-40.0f, 0.0f, -40.0f); // Defina os limites mínimos do mapa
+glm::vec3 mapMax(40.0f, 10.0f, 40.0f);  // Defina os limites máximos do mapa
 // Posição do jogador
 glm::vec4 g_PlayerPos;
 
@@ -371,8 +373,12 @@ int main(int argc, char* argv[])
     auto tree_pos = CalculatePoisson(plane_size, 5.5f, 50);
     RemoveFromCentralRadius(tree_pos, 5.0f);
 
+    glm::vec3 treeDimensions(1.0f, g_TreeScaleY, 1.0f);
+    CreateTreeBoundingBoxes(tree_pos, treeDimensions);
+
     // Configura posição inicial do jogador
     float playerSize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
+    float enemySize = g_VirtualScene["Object_5049cba8.jpg"].bbox_max.y - g_VirtualScene["Object_5049cba8.jpg"].bbox_min.y;
     g_PlayerPos = { 0.0f, 0.0f + playerSize/2, 0.0f, 1.0f };
 
     // Calculamos a altura das árvores para que fiquem logo acima do plano
@@ -535,8 +541,31 @@ int main(int argc, char* argv[])
         // Atualizamos a velocidade do jogador
         UpdatePlayerMovementSpeed();
 
+        glm::vec4 previousPlayerPos = g_PlayerPos; // Salva a posição anterior do jogador
+
+
         // Atualizamos a posição do jogador, após computada a velocidade
         UpdatePlayerPosition(delta_t);
+
+        CheckPlayerBounds(g_PlayerPos, mapMin, mapMax);
+
+        // Atualize as caixas delimitadoras
+        glm::vec3 playerScale = glm::vec3(1.0f, playerSize, 1.0f); // Tamanho aproximado do jogador
+        glm::vec3 enemyScale = glm::vec3(1.0f, enemySize, 1.0f); // Tamanho aproximado do inimigo
+        UpdateBoundingBox(playerBox, g_PlayerPos, playerScale);
+        UpdateBoundingBox(enemyBox, g_EnemyPos, enemyScale);
+
+        // Verifique colisão com o inimigo
+        if (CheckPlayerEnemyCollision()) {
+            // Reverte a posição do jogador se houver colisão com o inimigo
+            g_PlayerPos = previousPlayerPos;
+        }
+
+        // Verifique colisão com as árvores
+        if (CheckPlayerTreeCollision()) {
+            // Reverte a posição do jogador se houver colisão com uma árvore
+            g_PlayerPos = previousPlayerPos;
+        }
 
         // Calculamos a distância do jogador para o centro do mapa
         float player_radial_dist = sqrt(g_PlayerPos.x * g_PlayerPos.x + g_PlayerPos.z * g_PlayerPos.z);
