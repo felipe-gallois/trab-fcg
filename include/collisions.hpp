@@ -47,7 +47,7 @@ void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale); /
 bool CheckCollision(const BoundingBox &box1, const BoundingBox &box2);  //checa uma colisão entre 2 bounding boxes
 bool CheckPlayerEnemyCollision();
 bool CheckPlayerTreeCollision() ;
-void CheckPlayerBounds(glm::vec4& playerPos, glm::vec3& mapMin, glm::vec3& mapMax);
+void CheckPlayerBounds(glm::vec4& playerPos, float mapScale);
 void CreateTreeBoundingBoxes(const std::list<std::pair<float, float>>& treePositions, const glm::vec3& treeDimensions);
 
 

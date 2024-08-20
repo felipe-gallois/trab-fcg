@@ -210,8 +210,6 @@ float g_PlaneZ = 0.0f;
 // Escala do plano
 float g_PlaneScale = 5.0f;
 
-glm::vec3 mapMin(-40.0f, 0.0f, -40.0f); // Defina os limites mínimos do mapa
-glm::vec3 mapMax(40.0f, 10.0f, 40.0f);  // Defina os limites máximos do mapa
 // Posição do jogador
 glm::vec4 g_PlayerPos;
 
@@ -547,7 +545,7 @@ int main(int argc, char* argv[])
         // Atualizamos a posição do jogador, após computada a velocidade
         UpdatePlayerPosition(delta_t);
 
-        CheckPlayerBounds(g_PlayerPos, mapMin, mapMax);
+        CheckPlayerBounds(g_PlayerPos, plane_size);
 
         // Atualize as caixas delimitadoras
         glm::vec3 playerScale = glm::vec3(1.0f, playerSize, 1.0f); // Tamanho aproximado do jogador
@@ -555,10 +553,12 @@ int main(int argc, char* argv[])
         UpdateBoundingBox(playerBox, g_PlayerPos, playerScale);
         UpdateBoundingBox(enemyBox, g_EnemyPos, enemyScale);
 
-        // Verifique colisão com o inimigo
-        if (CheckPlayerEnemyCollision()) {
-            // Reverte a posição do jogador se houver colisão com o inimigo
-            g_PlayerPos = previousPlayerPos;
+        if (g_EnemyLifePoints > 0) {
+            // Verifique colisão com o inimigo
+            if (CheckPlayerEnemyCollision()) {
+                // Reverte a posição do jogador se houver colisão com o inimigo
+                g_PlayerPos = previousPlayerPos;
+            }
         }
 
         // Verifique colisão com as árvores

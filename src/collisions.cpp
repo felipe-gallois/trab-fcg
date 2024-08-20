@@ -100,11 +100,13 @@ void UpdateBoundingBox(BoundingBox &box, glm::vec3 position, glm::vec3 scale) {
             box.max = position + scale * 0.5f;
         }
         
-void CheckPlayerBounds(glm::vec4& playerPos, glm::vec3& mapMin, glm::vec3& mapMax)
+void CheckPlayerBounds(glm::vec4& playerPos, float mapScale)
 {
+    float mapMin = -mapScale / 2;
+    float mapMax = mapScale / 2;
 
-    if (playerPos.x < mapMin.x) playerPos.x = mapMin.x;
-    if (playerPos.x > mapMax.x) playerPos.x = mapMax.x;
-    if (playerPos.z < mapMin.z) playerPos.z = mapMin.z;
-    if (playerPos.z > mapMax.z) playerPos.z = mapMax.z;
+    if (playerPos.x < mapMin) playerPos.x = mapMin;
+    if (playerPos.x > mapMax) playerPos.x = mapMax;
+    if (playerPos.z < mapMin) playerPos.z = mapMin;
+    if (playerPos.z > mapMax) playerPos.z = mapMax;
 }
