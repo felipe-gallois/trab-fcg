@@ -266,6 +266,13 @@ GLint g_flash_red_uniform;
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
 
+// Variáveis que definem atributos da janela
+GLFWwindow *g_window;
+bool g_window_fullscreen = false;
+int g_window_width = 800;
+int g_window_height = 600;
+int g_window_x_pos, g_window_y_pos;
+
 int main(int argc, char* argv[])
 {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -291,12 +298,12 @@ int main(int argc, char* argv[])
     // Pedimos para utilizar o perfil "core", isto é, utilizaremos somente as
     // funções modernas de OpenGL.
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
-    GLFWwindow* window;
-    window = glfwCreateWindow(800, 600, "Trabalho FCG", NULL, NULL);
-    if (!window)
+    g_window = glfwCreateWindow(g_window_width, g_window_height, "Trabalho FCG", NULL, NULL);
+    if (!g_window)
     {
         glfwTerminate();
         fprintf(stderr, "ERROR: glfwCreateWindow() failed.\n");
@@ -304,18 +311,18 @@ int main(int argc, char* argv[])
     }
 
     // Não exibe o cursor
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(g_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // Definimos a função de callback que será chamada sempre que o usuário
     // pressionar alguma tecla do teclado ...
-    glfwSetKeyCallback(window, KeyCallback);
+    glfwSetKeyCallback(g_window, KeyCallback);
     // ... ou clicar os botões do mouse ...
-    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    glfwSetMouseButtonCallback(g_window, MouseButtonCallback);
 
-    glfwSetCursorPosCallback(window, CursorPosCallback);
+    glfwSetCursorPosCallback(g_window, CursorPosCallback);
 
     // Indicamos que as chamadas OpenGL deverão renderizar nesta janela
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(g_window);
 
     // Carregamento de todas funções definidas por OpenGL 3.3, utilizando a
     // biblioteca GLAD.
@@ -324,8 +331,8 @@ int main(int argc, char* argv[])
     // Definimos a função de callback que será chamada sempre que a janela for
     // redimensionada, por consequência alterando o tamanho do "framebuffer"
     // (região de memória onde são armazenados os pixels da imagem).
-    glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
-    FramebufferSizeCallback(window, 800, 600); // Forçamos a chamada do callback acima, para definir g_ScreenRatio.
+    glfwSetFramebufferSizeCallback(g_window, FramebufferSizeCallback);
+    FramebufferSizeCallback(g_window, g_window_width, g_window_height); // Forçamos a chamada do callback acima, para definir g_ScreenRatio.
 
     // Imprimimos no terminal informações sobre a GPU do sistema
     const GLubyte *vendor      = glGetString(GL_VENDOR);
@@ -396,7 +403,7 @@ int main(int argc, char* argv[])
     float delta_t;
 
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(g_window))
     {
         // Aqui executamos as operações de renderização
 
@@ -643,7 +650,7 @@ int main(int argc, char* argv[])
         // chamada abaixo faz a troca dos buffers, mostrando para o usuário
         // tudo que foi renderizado pelas funções acima.
         // Veja o link: https://en.wikipedia.org/w/index.php?title=Multiple_buffering&oldid=793452829#Double_buffering_in_computer_graphics
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(g_window);
 
         // Verificamos com o sistema operacional se houve alguma interação do
         // usuário (teclado, mouse, ...). Caso positivo, as funções de callback
@@ -1321,6 +1328,24 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 // tecla do teclado. Veja http://www.glfw.org/docs/latest/input_guide.html#input_key
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 {
+    // Registra se o usuário pressionou F11
+    if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+        if (g_window_fullscreen) {
+            // Switch to windowed mode
+            glfwSetWindowMonitor(window, nullptr, g_window_x_pos, g_window_y_pos, g_window_width, g_window_height, 0);
+        } else {
+            // Remember the window position and size
+            glfwGetWindowPos(window, &g_window_x_pos, &g_window_y_pos);
+            glfwGetWindowSize(window, &g_window_width, &g_window_height);
+            // Get the primary monitor
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            // Switch to fullscreen mode
+            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        }
+        g_window_fullscreen = !g_window_fullscreen;
+    }
+
     // Registra se o usuário pressionou ou soltou W
     if (key == GLFW_KEY_W)
     {
