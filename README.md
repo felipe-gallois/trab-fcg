@@ -52,6 +52,10 @@ O teste raio-AABB foi utilizado para detectar se o ataque do jogador atingiu o
 adversário. O raio partia do ponto *c* do centro da câmera e era dirigido no
 sentido do vetor *view* até certa distância.
 
+Além do mais, utilizou-se os testes de intersecção ponto-AABB e AABB-AABB para
+impedir que o jogador saísse da área do mapa, e para que o jogador colidisse
+com as árvores e o adversário, respectivamente.
+
 ### Modelos de iluminação
 
 A respeito dos modelos de iluminação, o chão e as árvores utilizaram o modelo
